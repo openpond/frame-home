@@ -2,10 +2,11 @@
 const base = require('./electron-builder-base')
 module.exports = {
   ...base,
-  appId: 'local.frame.home',
-  productName: 'Frame Home',
+  appId: 'com.openpond.local-wallet',
+  productName: 'OpenPond Local Wallet',
+  icon: 'resources/branding/openpond-wallet.png',
   directories: { output: 'dist/home' },
-  artifactName: 'Frame-Home-${version}-${os}-${arch}.${ext}',
+  artifactName: 'OpenPond-Local-Wallet-${version}-${os}-${arch}.${ext}',
   publish: null,
-  linux: { executableName: 'frame-home', category: 'Finance' }
+  linux: { executableName: 'openpond-local-wallet', category: 'Finance' }
 }

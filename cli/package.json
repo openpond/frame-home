@@ -1,0 +1,12 @@
+{
+  "name": "op-walletctl",
+  "version": "0.1.0",
+  "description": "Read-only control for OpenPond Local Wallet",
+  "license": "GPL-3.0",
+  "bin": {
+    "op-walletctl": "op-walletctl.cjs"
+  },
+  "files": [
+    "op-walletctl.cjs"
+  ]
+}

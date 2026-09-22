@@ -7,6 +7,7 @@ import Dropdown from '../../resources/Components/Dropdown'
 import Dash from '../dash/App'
 import { portfolio, money } from './portfolio'
 import HoldingRow from './HoldingRow'
+import walletLogo from '../../resources/branding/openpond-wallet.png'
 
 const navigation = [
   ['accounts', 'Accounts', 'accounts'],
@@ -16,8 +17,15 @@ const navigation = [
   ['settings', 'Settings', 'settings']
 ]
 
-export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
-  const { accounts, balances, networks, networksMeta, rates } = main
+export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan, connection }) {
+  const { balances, networks, networksMeta, rates } = main
+  const accounts = useMemo(
+    () => ({
+      ...Object.fromEntries((connection?.accounts || []).map((account) => [account.id, account])),
+      ...main.accounts
+    }),
+    [main.accounts, connection?.accounts]
+  )
   const view = nav[0]?.view || 'holdings'
   const section = [...nav].reverse().find((item) => navigation.some(([id]) => id === item.view))?.view || view
   const [search, setSearch] = useState('')
@@ -44,6 +52,7 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
     ? `Refreshing accounts: ${checked} of ${data.accounts.length} checked.`
     : `${checked} accounts checked across ${scan.chains.length} connected networks.`
   const openAccount = (id) => {
+    if (!main.accounts?.[id]) return
     setError('')
     link.rpc('setSigner', id, (err) => {
       if (err) return setError('Could not open this account. Open Extension to check its status.')
@@ -57,9 +66,9 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
 
   return (
     <div className='homeLayout'>
-      <aside className='homeNavigation' aria-label='Frame navigation'>
-        <div className='homeLogo' aria-label='Frame'>
-          {svg.logo(40)}
+      <aside className='homeNavigation' aria-label='OpenPond Local Wallet navigation'>
+        <div className='homeLogo' aria-label='OpenPond Local Wallet'>
+          <img src={walletLogo} width='40' height='40' alt='' />
         </div>
         <nav className='dashModules'>
           <button
@@ -185,7 +194,7 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
                       <div className='homeEmpty'>
                         {data.accounts.length
                           ? 'No holdings to show for these filters. Balances refresh in the background.'
-                          : 'Add an account in Frame to see its holdings here.'}
+                          : 'Add an account to see its holdings here.'}
                       </div>
                     ) : null}
                   </div>
@@ -221,6 +230,7 @@ class HomeStore extends React.Component {
         }}
         nav={this.store('windows.dash.nav')}
         scan={this.store('home.scan')}
+        connection={this.store('openpond')}
       />
     )
   }

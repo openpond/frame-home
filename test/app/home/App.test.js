@@ -108,3 +108,19 @@ test('expanding holders lists accounts without changing the connected wallet', (
   fireEvent.click(toggle)
   expect(screen.queryByLabelText('Accounts holding USDC')).toBeNull()
 })
+
+test('Personal Vault shares holdings without selecting a signer and disappears on revocation', () => {
+  const remote = '0x3333333333333333333333333333333333333333'
+  const source = { ...main, balances: { ...main.balances, [remote]: main.balances[address] } }
+  const connection = {
+    state: 'connected',
+    accounts: [{ id: remote, address: remote, name: 'Personal Vault' }]
+  }
+  const { rerender } = render(<Home main={source} connection={connection} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Show accounts holding USDC' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Open account Personal Vault' }))
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(link.send).not.toHaveBeenCalled()
+  rerender(<Home main={source} connection={{ state: 'unavailable', accounts: [] }} />)
+  expect(screen.queryByRole('button', { name: 'Open account Personal Vault' })).toBeNull()
+})

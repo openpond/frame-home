@@ -4,9 +4,11 @@ import log from 'electron-log'
 import url from 'url'
 
 // Set an isolated profile before importing any state or signer modules when requested.
-if (process.env.FRAME_HOME_USER_DATA) {
-  app.setPath('userData', path.resolve(process.env.FRAME_HOME_USER_DATA))
-}
+const walletProfile = process.env.OPENPOND_WALLET_PROFILE || process.env.FRAME_HOME_USER_DATA
+app.setPath(
+  'userData',
+  walletProfile ? path.resolve(walletProfile) : path.join(app.getPath('appData'), 'frame')
+)
 
 // DO NOT MOVE - env var below is required for app init and must be set before all local imports
 process.env.BUNDLE_LOCATION = process.env.BUNDLE_LOCATION || path.resolve(__dirname, './../..', 'bundle')
@@ -26,6 +28,7 @@ import { isWalletSender, openBlockExplorer, openExternal } from './windows/windo
 import { FrameInstance } from './windows/frames/frameInstances'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
+import { startLocalWallet } from './localWallet'
 
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas', 'true')
 app.commandLine.appendSwitch('enable-gpu-rasterization', 'true')
@@ -303,6 +306,7 @@ walletIPC('*:addFrame', (e, id) => {
 })
 
 app.on('ready', () => {
+  void startLocalWallet().catch(() => log.error('Local wallet service could not start'))
   menu()
   windows.init()
   if (app.dock) app.dock.show()

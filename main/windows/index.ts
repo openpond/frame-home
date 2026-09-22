@@ -133,7 +133,7 @@ function showHome() {
   if (!windows.home || windows.home.isDestroyed()) {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize
     initWindow('home', {
-      title: 'Frame Home',
+      title: 'OpenPond Local Wallet',
       width: Math.min(1240, width),
       height: Math.min(840, height),
       minWidth: Math.min(760, width),

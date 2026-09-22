@@ -690,6 +690,8 @@ module.exports = {
   },
   setHomeVisible: (u, visible) => u('home.visible', () => visible),
   setHomeScanStatus: (u, status) => u('home.scan', () => status),
+  setOpenPondConnection: (u, connection) => u('openpond', () => connection),
+  setLocalWalletReadUntil: (u, until) => u('home.readUntil', () => until),
   // Dashboard
   toggleDash: (u, force) => {
     u('windows.dash.showing', (s) => (force === 'hide' ? false : force === 'show' ? true : !s))

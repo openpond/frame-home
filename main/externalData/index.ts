@@ -41,9 +41,14 @@ export default function () {
   rates.start()
   balances.start()
   const portfolio = portfolioScanner({
-    addresses: () => Object.keys(store('main.accounts') || {}),
+    addresses: () => [
+      ...new Set([
+        ...Object.keys(store('main.accounts') || {}),
+        ...(store('openpond.accounts') || []).map((account: { address: string }) => account.address)
+      ])
+    ],
     chains: () => storeApi.getConnectedNetworks().map((network) => network.id),
-    visible: () => !!store('home.visible'),
+    visible: () => !!store('home.visible') || (store('home.readUntil') || 0) > Date.now(),
     ready: balances.isReady,
     scan: balances.refreshAccount,
     report: (accounts, chains) => store.setHomeScanStatus({ accounts, chains })

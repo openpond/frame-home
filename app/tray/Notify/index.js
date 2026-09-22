@@ -6,7 +6,7 @@ import svg from '../../../resources/svg'
 import link from '../../../resources/link'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 import { capitalize } from '../../../resources/utils'
-import frameIcon from '../../../asset/FrameIcon.png'
+import frameIcon from '../../../resources/branding/openpond-wallet.png'
 import ExtensionConnectNotification from './ExtensionConnect'
 
 const FEE_WARNING_THRESHOLD_USD = 50
