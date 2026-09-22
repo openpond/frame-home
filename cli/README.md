@@ -9,15 +9,14 @@ op-walletctl connect
 op-walletctl status --json
 op-walletctl accounts --json
 op-walletctl holdings --json
-op-walletctl disconnect
 ```
+
+`connect` discovers or launches the local desktop and returns its readiness. Hosted Personal Vault pairing is deferred; this version reads the desktop's existing local, hardware and watch-only accounts.
 
 The desktop must have been launched once, or its `openpond-local-wallet` executable must be on PATH. `OP_WALLET_EXECUTABLE` can select an installed executable explicitly. Discovery records the executable and profile, allowing later commands to launch the wallet from any working directory. `--profile /absolute/path` selects a previously launched profile. The CLI uses a filesystem-protected Unix socket, not the browser provider or a TCP port. Linux is the validated platform.
 
-`connect` opens the hosted approval page and prints a code. Compare it with the browser, sign in there, and explicitly approve Personal Vault for 24 hours. The browser session and Turnkey keys never enter this CLI. Hosted devices can be revoked at `/local-wallet`; `disconnect` revokes the current device and removes its local key. Signing, seed export, policy changes and Agent Wallet are unsupported.
-
-The returned raw balances include chain ID, contract address, symbol and decimals. Each account has `scan.state`, `checkedAt`, `stale` and `partial`; a cached balance is never proof of a fresh scan. CLI reads wake the existing scanner for 30 seconds. Query again after a pending refresh to obtain the result. Existing local accounts remain readable if hosted pairing is offline; Personal Vault is excluded until its grant verifies again.
+The returned raw balances include chain ID, contract address, symbol and decimals. Each account has `scan.state`, `checkedAt`, `stale` and `partial`; cached balances are explicitly marked. CLI reads wake the existing scanner for 30 seconds. Query again after a pending refresh to obtain the result. Locked hardware or local signers remain readable without unlocking; signer status is included. The service has no signing, seed-export, approval or policy-changing operations.
 
 The local service trusts the current OS user. Other software with unrestricted same-user filesystem access shares that trust boundary. Agent-specific grants and integration are a later step.
 
-For staging, launch the desktop with `OPENPOND_WALLET_ORIGIN=https://staging.ducky.capital`. The production default is `https://ducky.capital`; deploy the hosted pairing endpoints there before using production pairing. `OPENPOND_WALLET_PROFILE` selects an alternate desktop profile; `FRAME_HOME_USER_DATA` remains supported. The default retains the existing Frame profile.
+`OPENPOND_WALLET_PROFILE` selects an alternate desktop profile; `FRAME_HOME_USER_DATA` remains supported. The default retains the existing Frame profile. No hosted wallet page or account is required for these commands.

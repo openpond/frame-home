@@ -5,7 +5,6 @@ import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 
 import Signer from '../Signer'
-import OpenPond from './OpenPond'
 
 import AddHardware from './Add/AddHardware'
 import AddHardwareLattice from './Add/AddHardwareLattice'
@@ -182,9 +181,6 @@ class Dash extends React.Component {
       <div className='cardShow'>
         <div className='signers'>
           <div className='signersMid'>
-            <div className='signersList'>
-              <OpenPond connection={this.store('openpond')} />
-            </div>
             {/* <div className='signersHeader'>
                 Your Hardware Signers
               </div> */}

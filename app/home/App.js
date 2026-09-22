@@ -17,15 +17,8 @@ const navigation = [
   ['settings', 'Settings', 'settings']
 ]
 
-export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan, connection }) {
-  const { balances, networks, networksMeta, rates } = main
-  const accounts = useMemo(
-    () => ({
-      ...Object.fromEntries((connection?.accounts || []).map((account) => [account.id, account])),
-      ...main.accounts
-    }),
-    [main.accounts, connection?.accounts]
-  )
+export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
+  const { accounts, balances, networks, networksMeta, rates } = main
   const view = nav[0]?.view || 'holdings'
   const section = [...nav].reverse().find((item) => navigation.some(([id]) => id === item.view))?.view || view
   const [search, setSearch] = useState('')
@@ -52,7 +45,6 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan, conne
     ? `Refreshing accounts: ${checked} of ${data.accounts.length} checked.`
     : `${checked} accounts checked across ${scan.chains.length} connected networks.`
   const openAccount = (id) => {
-    if (!main.accounts?.[id]) return
     setError('')
     link.rpc('setSigner', id, (err) => {
       if (err) return setError('Could not open this account. Open Extension to check its status.')
@@ -230,7 +222,6 @@ class HomeStore extends React.Component {
         }}
         nav={this.store('windows.dash.nav')}
         scan={this.store('home.scan')}
-        connection={this.store('openpond')}
       />
     )
   }

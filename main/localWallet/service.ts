@@ -3,8 +3,8 @@ import path from 'path'
 import http from 'http'
 import { createHash } from 'crypto'
 
-export type ReadMethod = 'status' | 'accounts' | 'holdings' | 'connect' | 'disconnect'
-const methods = new Set(['status', 'accounts', 'holdings', 'connect', 'disconnect'])
+export type ReadMethod = 'status' | 'accounts' | 'holdings' | 'connect'
+const methods = new Set(['status', 'accounts', 'holdings', 'connect'])
 export async function startService(directory: string, dispatch: (method: ReadMethod) => Promise<unknown>) {
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 })
   fs.chmodSync(directory, 0o700)

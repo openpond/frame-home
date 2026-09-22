@@ -1,8 +1,10 @@
 # 2026-09-20 Frame Home: OpenPond integration, distribution, performance, and security
 
-Status: phase 1–2 fixes implemented in the local baseline; local connection, branding, CLI and installer delivery remain planned.
+Status: baseline merged into OpenPond; branding and read-only desktop CLI implemented and under final validation. Hosted Personal Vault pairing is paused by user request. Agent integration, signing and release modernization remain deferred.
 
-Latest checkpoint: 2026-09-22. Product name: **OpenPond Local Wallet**; separate CLI: **`op-walletctl`**. Preserve the repository's existing account-card design without additional small labels, badges or explanatory card copy. Add **Connect OpenPond Wallet**, then display the connected **Personal Vault** alongside existing accounts using the same components. The display name may be hardcoded; authorization must use verified wallet/account IDs. Agent Wallet support is deferred, including discovery, creation and delegation. Next proof: explicit device pairing and read-only Personal Vault account/holdings access through the desktop app and CLI. Signing remains a later supervised phase. The recreated [OpenPond PR #1](https://github.com/openpond/frame-home/pull/1) and [PR #2](https://github.com/openpond/frame-home/pull/2) were verified open during migration; the startup/profile-order fix remains local. This checkpoint updates the plan, not application behavior.
+Latest checkpoint: 2026-09-22. Both migrated PRs ([#1](https://github.com/openpond/frame-home/pull/1), [#2](https://github.com/openpond/frame-home/pull/2)) are merged after Verify passed. Product: **OpenPond Local Wallet**, with the existing OpenPond mark and a wallet glyph inside its lower-right corner. Preserve the existing UI and default Frame profile. **`op-walletctl`** connects to the local desktop and reads its existing local, hardware and watch-only accounts. `connect` currently means local discovery/start, not hosted authentication. User paused hosted wallet changes while that page is being updated elsewhere; no Personal Vault connection tile or pairing endpoint is part of this delivery. Stop before agent integration (the previously agreed step 5).
+
+Correct hosted ownership for later work: **`sandbox`** serves `wallet.openpond.ai` and `wallet.staging.openpond.ai`. The sibling **`wallet`** repository serves Ducky Capital and is not this integration target. An accidental Ducky staging implementation was identified and is being rolled back through additive source reverts and CLI-generated schema cleanup. Do not resume hosted work or ask for a Ducky login as part of the CLI milestone.
 
 Related documents and evidence:
 
@@ -211,9 +213,7 @@ Connection metadata such as capabilities, version, reachability and expiry belon
 
 The proposed flow is desktop-generated authentication key → explicit pairing request → browser-based OpenPond sign-in and device approval → limited, expiring access to the verified Personal Vault. No seed export, browser-cookie copying, or hosted delegate credential download is part of connection. Bind a short-lived, single-use pairing request to the initiating device key, authenticated user and selected wallet IDs; test replay, substituted keys/accounts and revocation before claiming the flow is secure.
 
-The current hosted [OTP login](../../../../wallet/apps/web/app/actions/otp.ts) registers a client public key with `otpLogin` but does not supply a session profile. Do not reuse that session authority unchanged for the CLI. Turnkey [session profiles](https://docs.turnkey.com/features/authentication/sessions/session-profiles) support request-scoped restrictions; verify the installed SDK/API path and enforce read-only access in phase 3, including denial of signing, export and permission changes. Keep authentication credentials in the trusted wallet process and protected storage, outside CLI output and model context. Same-user unrestricted shell access is still a boundary limitation.
-
-The hosted [personal-wallet provisioner](../../../../wallet/lib/turnkey/personal-wallet-provisioning.ts) creates a Personal Wallet; [service.ts](../../../../wallet/lib/turnkey/service.ts) distinguishes that path from the legacy two-wallet repair flow. Do not infer Agent Wallet availability for new users. Export/import and Agent Wallet connectivity are separate future scope.
+Hosted pairing is deferred. When resumed, use the OpenPond [wallet portal](../../../../sandbox/apps/web/components/wallet/openpond-wallet-portal.tsx), [Turnkey session verifier](../../../../sandbox/lib/wallet/turnkey-session.ts), and [wallet identity mapping](../../../../sandbox/lib/wallet/turnkey-user.ts). The portal uses Turnkey browser sessions; do not copy that credential to the desktop or CLI. Verify wallet/account ownership against Turnkey and the stored Personal Vault relationship; a client-supplied wallet name or ID alone is insufficient. Agent Wallet connectivity and seed export/import remain out of scope.
 
 Default mode: approved reads plus **human-approved transactions in Frame Home**. The model may prepare a transaction and request approval; it cannot approve its own request. Persistent unattended spending is a separate later capability requiring explicit policy, restricted funding, and a different threat-model decision.
 
@@ -326,12 +326,13 @@ Implementation validation: `npm run test:unit` passed 1,251 tests (901 main, 232
 
 ### Phase 3 — Package and pair a read-only local connected app
 
-- [ ] Apply the OpenPond Local Wallet name and logo through the existing design and packaging assets; preserve profile selection and existing-account access.
-- [ ] Add Connect OpenPond Wallet and a Personal Vault card using existing account components, without new labels/badges or layout changes. Exclude Agent Wallet support.
-- [ ] Implement explicit browser/device pairing to the verified Personal Vault with restricted access, expiry and revocation; test key substitution, replay, wrong-wallet access and denial of signing/export/policy changes.
-- [ ] Deliver the separate `op-walletctl` executable with `connect`, `status --json`, `accounts --json` and `holdings --json`; reuse the desktop service and expose no credentials.
+- [x] Apply the OpenPond Local Wallet name and logo through the existing design and packaging assets; preserve profile selection and existing-account access. Done: Home/shared logo and tray icon; fork packaging identity; explicit profile override before state imports.
+- [ ] **Paused by user (2026-09-22).** Add Connect OpenPond Wallet and a Personal Vault card using existing account components, without new labels/badges or layout changes. Exclude Agent Wallet support.
+- [ ] **Paused by user (2026-09-22).** Implement explicit browser/device pairing to the verified Personal Vault with restricted access, expiry and revocation; test key substitution, replay, wrong-wallet access and denial of signing/export/policy changes.
+- [x] Deliver the separate `op-walletctl` executable with `connect`, `status --json`, `accounts --json` and `holdings --json`; reuse the desktop service and expose no credentials. Done: protocol v1; owner-only Unix socket; discovery/start; explicit stale/partial/offline scan metadata. Final install/start proof is recorded below.
 - [ ] Publish a verified Home installer/archive with fork-specific identity and explicit release configuration.
-- [ ] Implement local discovery, authenticated status, paired device/account/chain grants, revocation, and version negotiation.
+- [x] Implement local discovery, OS-user-authenticated status and protocol-version checks. Done: owner-only socket/directory and discovery file; allowlisted read-only commands; browser-origin and payload rejection.
+- [ ] Add per-device/account/chain grants and revocation when hosted/agent pairing resumes. The current local service trusts the OS user; it is not a per-agent isolation boundary.
 - [ ] Add the Frame Connected Apps provider, capability schemas, status, mention resolution and authenticated local-executor routing; verify supported local runtimes and reject hosted execution.
 - [ ] Prove account/portfolio reads with fresh/stale/partial states, locked/offline handling and cloud-runtime rejection.
 - [ ] Prove packaged-install launch and reconnect from an unrelated working directory; do not depend on sibling source paths at runtime.
@@ -382,6 +383,8 @@ Proposed acceptance gates: no unauthorized direct/wrapped wallet data access; no
 - Does a future cloud agent need a user-device bridge? This is out of the first local integration scope and needs a separate authenticated relay design.
 
 ## Progress Log
+
+- 2026-09-22 CLI checkpoint: User paused hosted Personal Vault changes and requested continued CLI work. The correct hosted backend is `sandbox`, not Ducky's `wallet` repo; no changes remain in the OpenPond hosted worktree. Branding and CLI work remain in `frame-home`; hosted prototype code is retained only on local checkpoint branch `feat/personal-vault-pairing-checkpoint`. Local CLI reads use existing balances and scanners without selecting or unlocking an account. No agent integration or transactions were added.
 
 - 2026-09-22: Recorded OpenPond Local Wallet branding, the separate `op-walletctl` command, and Personal Vault-only connection scope. User requires the existing repository design with no extra small labels/badges; a hardcoded Personal Vault display name is acceptable. Agent Wallet support is deferred. Reviewed account components, hosted OTP login and personal-wallet provisioning; pairing and restricted-session enforcement remain unimplemented. Recreated repository PRs retain original commits; startup profile-order correction and its regression test remain local.
 

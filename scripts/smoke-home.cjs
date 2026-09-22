@@ -119,27 +119,9 @@ const run = async () => {
     `!!document.querySelector('[aria-label="accounts workspace"] .dash')`
   )
   if (!accountsInsideHome) throw Error('Existing accounts view did not open inside Home')
-  const connectCard = await home.webContents.executeJavaScript(
-    `document.querySelector('.signerName')?.textContent`
-  )
-  if (connectCard !== 'Connect OpenPond Wallet') throw Error('OpenPond connection card missing')
-  const fixtureAddress = '0x5555555555555555555555555555555555555555'
-  store.setOpenPondConnection({
-    state: 'connected',
-    accounts: [{ id: fixtureAddress, address: fixtureAddress, name: 'Personal Vault' }]
-  })
-  await sleep(100)
-  const personalCard = await home.webContents.executeJavaScript(
-    `({name: document.querySelector('.signerName')?.textContent, status: !!document.querySelector('.signerStatusText')})`
-  )
-  if (personalCard.name !== 'Personal Vault' || personalCard.status)
-    throw Error('Personal Vault card changed the existing design')
-  const cardImage = await home.webContents.capturePage()
-  fs.writeFileSync(path.join(process.env.FRAME_HOME_USER_DATA, 'accounts-preview.png'), cardImage.toPNG())
-  store.setOpenPondConnection({ state: 'disconnected', accounts: [] })
   const execFile = require('util').promisify(require('child_process').execFile)
   const cli = path.join(__dirname, '../cli/op-walletctl.cjs')
-  for (const command of ['status', 'accounts', 'holdings']) {
+  for (const command of ['connect', 'status', 'accounts', 'holdings']) {
     const { stdout } = await execFile(process.env.FRAME_HOME_TEST_NODE || 'node', [cli, command, '--json'], {
       cwd: require('os').tmpdir(),
       env: { ...process.env, XDG_CONFIG_HOME: process.env.FRAME_HOME_USER_DATA }

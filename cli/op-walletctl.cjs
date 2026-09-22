@@ -61,13 +61,11 @@ function request(meta) {
 }
 async function main() {
   if (method === '--help' || method === '-h')
-    return { usage: 'op-walletctl connect|disconnect|status|accounts|holdings [--json] [--profile PATH]' }
+    return { usage: 'op-walletctl connect|status|accounts|holdings [--json] [--profile PATH]' }
   if (profileIndex >= 0 && (!args[profileIndex + 1] || args[profileIndex + 1].startsWith('--')))
     throw new Error('--profile requires a path')
-  if (!['connect', 'disconnect', 'status', 'accounts', 'holdings'].includes(method))
-    throw new Error(
-      'Usage: op-walletctl connect|disconnect|status|accounts|holdings [--json] [--profile PATH]'
-    )
+  if (!['connect', 'status', 'accounts', 'holdings'].includes(method))
+    throw new Error('Usage: op-walletctl connect|status|accounts|holdings [--json] [--profile PATH]')
   let meta
   try {
     meta = metadata()
@@ -106,7 +104,6 @@ async function main() {
 main()
   .then((result) => {
     if (json) console.log(JSON.stringify(result))
-    else if (result.code) console.log(`Compare this code in your browser: ${result.code}`)
     else console.log(JSON.stringify(result, null, 2))
   })
   .catch((error) => {
