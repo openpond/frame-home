@@ -1,8 +1,8 @@
 # 2026-09-20 Frame Home: OpenPond integration, distribution, performance, and security
 
-Status: investigation complete; proposed implementation plan. Application fixes, the OpenPond connector, and release installers are not implemented by this review.
+Status: phase 1–2 fixes implemented in the local baseline; local connection, branding, CLI and installer delivery remain planned.
 
-Latest checkpoint: 2026-09-21. Keep Frame's wallet and integrate directly through OpenPond Connected Apps, exposing specific account-scoped capabilities through an authenticated local executor. Cast and MCP are removed from the proposed integration. The agent prepares operations; the user clicks Sign/Send in Frame. Any future unattended policy must be explicitly enabled by the user and cannot be granted or expanded by the agent. Repair the confirmed provider/IPC boundaries and scanner issues before agent transaction requests. Next proof: paired connected-app reads, then a user-approved transaction with durable status. Documentation and investigation only; no connector or fixes implemented.
+Latest checkpoint: 2026-09-22. Product name: **OpenPond Local Wallet**; separate CLI: **`op-walletctl`**. Preserve the repository's existing account-card design without additional small labels, badges or explanatory card copy. Add **Connect OpenPond Wallet**, then display the connected **Personal Vault** alongside existing accounts using the same components. The display name may be hardcoded; authorization must use verified wallet/account IDs. Agent Wallet support is deferred, including discovery, creation and delegation. Next proof: explicit device pairing and read-only Personal Vault account/holdings access through the desktop app and CLI. Signing remains a later supervised phase. The recreated [OpenPond PR #1](https://github.com/openpond/frame-home/pull/1) and [PR #2](https://github.com/openpond/frame-home/pull/2) were verified open during migration; the startup/profile-order fix remains local. This checkpoint updates the plan, not application behavior.
 
 Related documents and evidence:
 
@@ -32,7 +32,7 @@ Performance should be addressed before adding another consumer. The main issue i
 
 This is a focused application review, not a complete wallet cryptography, dependency, hardware-signer, or malicious-dapp audit. No real signing operation was exercised. The already-running app was observed through process counters only; wallet profiles and private keys were not read.
 
-### What is published?
+### Publication evidence from the original review (2026-09-20)
 
 | Item                           | Verified status                                                                                                                                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -178,13 +178,13 @@ Fix: key prices by chain and normalized contract throughout the rate store, type
 
 ## Product Decision
 
-### Direct Connected Apps integration with user-controlled signing
+### CLI-first integration with user-controlled signing
 
-Keep Frame's wallet, account management, approval UI and signer implementations. Integrate through OpenPond's existing Connected Apps capability model with a Frame-specific local executor. Cast, MCP and a wallet rebuild are outside this plan.
+Keep Frame's wallet, account management, approval UI and signer implementations. Build `op-walletctl` as a separate executable backed by an authenticated local wallet service. OpenPond's Connected Apps local executor should reuse that service and its capability checks. The existing `openpond` CLI remains separate. Cast and a wallet rebuild remain outside this plan. An MCP adapter for ChatGPT sessions without local shell access is a possible later integration, not a dependency of the first local CLI delivery.
 
 ```text
-OpenPond Connected Apps / agent tools
-  -> capability check and Frame local executor
+op-walletctl / OpenPond Connected Apps local executor
+  -> account-scoped capability check
   -> authenticated account-scoped Frame request service
   -> user reviews and clicks Sign/Send in Frame
   -> existing signer
@@ -199,7 +199,21 @@ The initial product requires user approval for each sign/send. A possible future
 
 ### Local connected-app experience
 
-Recommend **Frame Home (Local)** in OpenPond's Apps page, with an explicit “Runs on this device” status. Keep the existing cloud Turnkey wallet as a separate product. A Frame connection should expose the chosen accounts, networks, capabilities, version, reachability, lock state and last verification time, without exporting signer material.
+Use **OpenPond Local Wallet** for the desktop application and retain the existing hosted OpenPond wallet. The initial hosted connection supports **Personal Vault only**. Existing hardware and local-key accounts continue to use the current account list. Do not require an Agent Wallet or create one during connection.
+
+Reuse the account-type entry and signer/account-card components in [Accounts](../../../app/dash/Accounts/index.js). The only new entry is **Connect OpenPond Wallet**; after connection, show **Personal Vault** using the existing card structure. Preserve the current layout, colors, typography, spacing, controls and interaction patterns. Do not add small source labels, Turnkey/hosted/local badges, subtitles, capability chips, or a redesigned onboarding/dashboard surface. Use the existing status and action patterns for reconnect, errors and removal. New behavior should fit the current design.
+
+The visible name **Personal Vault** may be hardcoded. It must not select or authorize a wallet: resolve the user's stored Personal Wallet/Vault relationship and verify its Turnkey organization, wallet and account IDs. Keep multiple addresses under the same existing signer/account structure, aggregate holdings with the other accounts, and avoid counting the same chain/address twice.
+
+Connection metadata such as capabilities, version, reachability and expiry belongs in the internal contract and appropriate existing management flows; it is not a requirement for extra card labels. Keep cached account data visible on session expiry and use the existing reconnect interaction.
+
+### Personal Vault authentication boundary
+
+The proposed flow is desktop-generated authentication key → explicit pairing request → browser-based OpenPond sign-in and device approval → limited, expiring access to the verified Personal Vault. No seed export, browser-cookie copying, or hosted delegate credential download is part of connection. Bind a short-lived, single-use pairing request to the initiating device key, authenticated user and selected wallet IDs; test replay, substituted keys/accounts and revocation before claiming the flow is secure.
+
+The current hosted [OTP login](../../../../wallet/apps/web/app/actions/otp.ts) registers a client public key with `otpLogin` but does not supply a session profile. Do not reuse that session authority unchanged for the CLI. Turnkey [session profiles](https://docs.turnkey.com/features/authentication/sessions/session-profiles) support request-scoped restrictions; verify the installed SDK/API path and enforce read-only access in phase 3, including denial of signing, export and permission changes. Keep authentication credentials in the trusted wallet process and protected storage, outside CLI output and model context. Same-user unrestricted shell access is still a boundary limitation.
+
+The hosted [personal-wallet provisioner](../../../../wallet/lib/turnkey/personal-wallet-provisioning.ts) creates a Personal Wallet; [service.ts](../../../../wallet/lib/turnkey/service.ts) distinguishes that path from the legacy two-wallet repair flow. Do not infer Agent Wallet availability for new users. Export/import and Agent Wallet connectivity are separate future scope.
 
 Default mode: approved reads plus **human-approved transactions in Frame Home**. The model may prepare a transaction and request approval; it cannot approve its own request. Persistent unattended spending is a separate later capability requiring explicit policy, restricted funding, and a different threat-model decision.
 
@@ -251,7 +265,7 @@ Start with native transfers and a small explicitly specified contract-operation 
 Keep Frame Home as a separately versioned desktop application; let OpenPond discover or launch a verified installation. Do not make OpenPond's basic startup compile Electron or download an unsigned wallet from a model-selected URL.
 
 - Add release metadata that clearly identifies Frame Home, its build commit and bridge protocol version; use an independent Home version/release channel.
-- Give the Home build explicit installer targets and explicit `glucrypto/frame-home` publish configuration. Add release checksums/provenance, license notices, platform signing/notarization where applicable, and an update policy for this fork.
+- Give the Home build explicit installer targets and explicit `openpond/frame-home` publish configuration. Add release checksums/provenance, license notices, platform signing/notarization where applicable, and an update policy for this fork.
 - Use a distinct default Home profile with an explicit existing-Frame migration/import choice. Do not silently copy signer files or switch the existing installation's profile. Continue supporting an explicit `FRAME_HOME_USER_DATA` override for development/test isolation.
 - Add a launcher/discovery helper that checks version/identity, reports port/profile conflicts, reuses a compatible running instance, and waits for authenticated readiness. Failure must not silently connect to stock Frame on port 1248.
 - Validate Linux x64 first with the current local build; macOS/Windows installers and hardware-signing compatibility require separate runtime proof.
@@ -269,7 +283,7 @@ The executable needs the rest of its unpacked directory. Stock Frame and Frame H
 
 ## Boundaries
 
-- This change set contains the working document and audit evidence only. No application fixes, wallet settings, approvals, transfers, releases, connector deployment, or OpenPond source edits were made.
+- The original investigation contained documentation and audit evidence only. Phase 1–2 implementation evidence is recorded below; the 2026-09-22 update changes only the plan. No connector, branding or CLI implementation, approvals, transfers or release is delivered by this checkpoint.
 - Do not expose renderer IPC as the connector, export private keys, give the model wallet passwords, or automate the wallet's approval UI.
 - Read-only connection grants must not imply permission to sign. Untrusted token metadata, dapp content, or tool output must not widen grants.
 - Real-wallet operation and public distribution should follow the security and dependency remediation gates below. Findings have not been sent upstream or published as issues by this review.
@@ -312,6 +326,10 @@ Implementation validation: `npm run test:unit` passed 1,251 tests (901 main, 232
 
 ### Phase 3 — Package and pair a read-only local connected app
 
+- [ ] Apply the OpenPond Local Wallet name and logo through the existing design and packaging assets; preserve profile selection and existing-account access.
+- [ ] Add Connect OpenPond Wallet and a Personal Vault card using existing account components, without new labels/badges or layout changes. Exclude Agent Wallet support.
+- [ ] Implement explicit browser/device pairing to the verified Personal Vault with restricted access, expiry and revocation; test key substitution, replay, wrong-wallet access and denial of signing/export/policy changes.
+- [ ] Deliver the separate `op-walletctl` executable with `connect`, `status --json`, `accounts --json` and `holdings --json`; reuse the desktop service and expose no credentials.
 - [ ] Publish a verified Home installer/archive with fork-specific identity and explicit release configuration.
 - [ ] Implement local discovery, authenticated status, paired device/account/chain grants, revocation, and version negotiation.
 - [ ] Add the Frame Connected Apps provider, capability schemas, status, mention resolution and authenticated local-executor routing; verify supported local runtimes and reject hosted execution.
@@ -354,6 +372,7 @@ Proposed acceptance gates: no unauthorized direct/wrapped wallet data access; no
 
 ## Open Questions
 
+- Which supported restricted-session path and browser/device handoff should be used with the installed Turnkey SDK? Prove the restrictions rather than treating an ordinary login session as read-only.
 - Which OpenPond local runtimes must expose the Frame connected-app capabilities initially? Verify equivalent capability checks and local routing for each supported runtime.
 - Which chains and accounts should the initial local grant cover, and which first operation matters most: native transfer, ERC-20 transfer, or a specific contract action?
 - Is a user-configured auto-approval policy needed in a later release? Initial sign/send operations require approval in Frame; no unattended authority is enabled or approved.
@@ -364,7 +383,9 @@ Proposed acceptance gates: no unauthorized direct/wrapped wallet data access; no
 
 ## Progress Log
 
-- 2026-09-21 latest decision: Removed Cast and MCP from the integration plan. Use Connected Apps with specific capabilities and a local executor; retain user Sign/Send approval in Frame. A user-controlled auto-approval policy remains a separate future decision. Documentation updated and local links checked; no application behavior changed.
+- 2026-09-22: Recorded OpenPond Local Wallet branding, the separate `op-walletctl` command, and Personal Vault-only connection scope. User requires the existing repository design with no extra small labels/badges; a hardcoded Personal Vault display name is acceptable. Agent Wallet support is deferred. Reviewed account components, hosted OTP login and personal-wallet provisioning; pairing and restricted-session enforcement remain unimplemented. Recreated repository PRs retain original commits; startup profile-order correction and its regression test remain local.
+
+- 2026-09-21 decision (CLI-first entry point updated above): Removed Cast and MCP from the initial integration plan. Use Connected Apps with specific capabilities and a local executor; retain user Sign/Send approval in Frame. A user-controlled auto-approval policy remains a separate future decision. Documentation updated and local links checked; no application behavior changed.
 
 - 2026-09-21 (superseded MCP proposal): User clarified the send/sign replacement question and chose to retain Frame's wallet. Superseded the rebuild proposal; documented local MCP tools, Frame-owned approval and the existing OpenPond local MCP registration path. Documentation only; no connector implemented.
 
