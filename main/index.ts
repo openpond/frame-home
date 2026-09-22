@@ -1,7 +1,13 @@
-import { app, ipcMain, protocol, clipboard, powerMonitor, BrowserWindow } from 'electron'
+import { isWalletSender } from './windows/window'
+import { app, ipcMain, protocol, clipboard, BrowserWindow } from 'electron'
 import path from 'path'
 import log from 'electron-log'
 import url from 'url'
+
+// Set an isolated profile before importing any state or signer modules when requested.
+if (process.env.FRAME_HOME_USER_DATA) {
+  app.setPath('userData', path.resolve(process.env.FRAME_HOME_USER_DATA))
+}
 
 // DO NOT MOVE - env var below is required for app init and must be set before all local imports
 process.env.BUNDLE_LOCATION = process.env.BUNDLE_LOCATION || path.resolve(__dirname, './../..', 'bundle')
@@ -77,27 +83,21 @@ process.on('unhandledRejection', (e) => {
   log.error('Unhandled Rejection!', e)
 })
 
+// Upstream releases would replace this fork. Updates must be built from this source.
 function startUpdater() {
-  powerMonitor.on('resume', () => {
-    log.debug('System resuming, starting updater')
-
-    updater.start()
-  })
-
-  powerMonitor.on('suspend', () => {
-    log.debug('System suspending, stopping updater')
-
-    updater.stop()
-  })
-
-  updater.start()
+  log.info('Frame Home: upstream automatic updates are disabled')
 }
 
 global.eval = () => {
   throw new Error(`This app does not support global.eval()`)
 } // eslint-disable-line
 
-ipcMain.on('tray:resetAllSettings', () => {
+const walletIPC: typeof ipcMain.on = (channel, listener) =>
+  ipcMain.on(channel, (event, ...args) => {
+    if (isWalletSender(event)) listener(event, ...args)
+  })
+
+walletIPC('tray:resetAllSettings', () => {
   persist.clear()
 
   if (updater.updateReady) {
@@ -108,7 +108,7 @@ ipcMain.on('tray:resetAllSettings', () => {
   app.exit(0)
 })
 
-ipcMain.on('tray:replaceTx', async (e, id, type) => {
+walletIPC('tray:replaceTx', async (e, id, type) => {
   store.navBack('panel')
   setTimeout(async () => {
     try {
@@ -119,17 +119,17 @@ ipcMain.on('tray:replaceTx', async (e, id, type) => {
   }, 1000)
 })
 
-ipcMain.on('tray:clipboardData', (e, data) => {
+walletIPC('tray:clipboardData', (e, data) => {
   if (data) clipboard.writeText(data)
 })
 
-ipcMain.on('tray:installAvailableUpdate', () => {
+walletIPC('tray:installAvailableUpdate', () => {
   store.updateBadge('')
 
   updater.fetchUpdate()
 })
 
-ipcMain.on('tray:dismissUpdate', (e, version, remind) => {
+walletIPC('tray:dismissUpdate', (e, version, remind) => {
   if (!remind) {
     store.dontRemind(version)
   }
@@ -139,57 +139,57 @@ ipcMain.on('tray:dismissUpdate', (e, version, remind) => {
   updater.dismissUpdate()
 })
 
-ipcMain.on('tray:removeAccount', (e, id) => {
+walletIPC('tray:removeAccount', (e, id) => {
   accounts.remove(id)
 })
 
-ipcMain.on('tray:renameAccount', (e, id, name) => {
+walletIPC('tray:renameAccount', (e, id, name) => {
   accounts.rename(id, name)
 })
 
-ipcMain.on('dash:removeSigner', (e, id) => {
+walletIPC('dash:removeSigner', (e, id) => {
   signers.remove(id)
 })
 
-ipcMain.on('dash:reloadSigner', (e, id) => {
+walletIPC('dash:reloadSigner', (e, id) => {
   signers.reload(id)
 })
 
-ipcMain.on('tray:resolveRequest', (e, req, result) => {
+walletIPC('tray:resolveRequest', (e, req, result) => {
   accounts.resolveRequest(req, result)
 })
 
-ipcMain.on('tray:rejectRequest', (e, req) => {
+walletIPC('tray:rejectRequest', (e, req) => {
   const err = { code: 4001, message: 'User rejected the request' }
   accounts.rejectRequest(req, err)
 })
 
-ipcMain.on('tray:clearRequestsByOrigin', (e, account, origin) => {
+walletIPC('tray:clearRequestsByOrigin', (e, account, origin) => {
   accounts.clearRequestsByOrigin(account, origin)
 })
 
-ipcMain.on('tray:openExternal', (e, url) => {
+walletIPC('tray:openExternal', (e, url) => {
   openExternal(url)
   store.setDash({ showing: false })
 })
 
-ipcMain.on('tray:openExplorer', (e, chain, hash, account) => {
+walletIPC('tray:openExplorer', (e, chain, hash, account) => {
   openBlockExplorer(chain, hash, account)
 })
 
-ipcMain.on('tray:copyTxHash', (e, hash) => {
+walletIPC('tray:copyTxHash', (e, hash) => {
   if (hash) clipboard.writeText(hash)
 })
 
-ipcMain.on('tray:giveAccess', (e, req, access) => {
+walletIPC('tray:giveAccess', (e, req, access) => {
   accounts.setAccess(req, access)
 })
 
-ipcMain.on('tray:addChain', (e, chain) => {
+walletIPC('tray:addChain', (e, chain) => {
   store.addNetwork(chain)
 })
 
-ipcMain.on('tray:switchChain', (e, type, id, req) => {
+walletIPC('tray:switchChain', (e, type, id, req) => {
   if (type && id) store.selectNetwork(type, id)
   accounts.resolveRequest(req)
 })
@@ -204,7 +204,7 @@ ipcMain.handle('tray:getTokenDetails', async (e, contractAddress, chainId) => {
   }
 })
 
-ipcMain.on('tray:addToken', (e, token, req) => {
+walletIPC('tray:addToken', (e, token, req) => {
   if (token) {
     log.info('adding custom token', token)
     store.addCustomTokens([token])
@@ -212,7 +212,7 @@ ipcMain.on('tray:addToken', (e, token, req) => {
   if (req) accounts.resolveRequest(req)
 })
 
-ipcMain.on('tray:removeToken', (e, token) => {
+walletIPC('tray:removeToken', (e, token) => {
   if (token) {
     log.info('removing custom token', token)
 
@@ -221,31 +221,31 @@ ipcMain.on('tray:removeToken', (e, token) => {
   }
 })
 
-ipcMain.on('tray:adjustNonce', (e, handlerId, nonceAdjust) => {
+walletIPC('tray:adjustNonce', (e, handlerId, nonceAdjust) => {
   accounts.adjustNonce(handlerId, nonceAdjust)
 })
 
-ipcMain.on('tray:resetNonce', (e, handlerId) => {
+walletIPC('tray:resetNonce', (e, handlerId) => {
   accounts.resetNonce(handlerId)
 })
 
-ipcMain.on('tray:removeOrigin', (e, handlerId) => {
+walletIPC('tray:removeOrigin', (e, handlerId) => {
   accounts.removeRequests(handlerId)
   store.removeOrigin(handlerId)
 })
 
-ipcMain.on('tray:clearOrigins', () => {
+walletIPC('tray:clearOrigins', () => {
   Object.keys(store('main.origins')).forEach((handlerId) => {
     accounts.removeRequests(handlerId)
   })
   store.clearOrigins()
 })
 
-ipcMain.on('tray:syncPath', (e, path, value) => {
+walletIPC('tray:syncPath', (e, path, value) => {
   store.syncPath(path, value)
 })
 
-ipcMain.on('tray:ready', () => {
+walletIPC('tray:ready', () => {
   require('./api')
 
   if (!isDev) {
@@ -253,23 +253,23 @@ ipcMain.on('tray:ready', () => {
   }
 })
 
-ipcMain.on('tray:updateRestart', () => {
+walletIPC('tray:updateRestart', () => {
   updater.quitAndInstall()
 })
 
-ipcMain.on('frame:close', (e) => {
+walletIPC('frame:close', (e) => {
   windows.close(e)
 })
 
-ipcMain.on('frame:min', (e) => {
+walletIPC('frame:min', (e) => {
   windows.min(e)
 })
 
-ipcMain.on('frame:max', (e) => {
+walletIPC('frame:max', (e) => {
   windows.max(e)
 })
 
-ipcMain.on('frame:unmax', (e) => {
+walletIPC('frame:unmax', (e) => {
   windows.unmax(e)
 })
 
@@ -283,12 +283,12 @@ dapps.add({
   status: 'initial'
 })
 
-ipcMain.on('unsetCurrentView', async (e) => {
+walletIPC('unsetCurrentView', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender) as FrameInstance
   dapps.unsetCurrentView(win.frameId as string)
 })
 
-ipcMain.on('*:addFrame', (e, id) => {
+walletIPC('*:addFrame', (e, id) => {
   const existingFrame = store('main.frames', id)
 
   if (existingFrame) {
@@ -306,7 +306,7 @@ ipcMain.on('*:addFrame', (e, id) => {
 app.on('ready', () => {
   menu()
   windows.init()
-  if (app.dock) app.dock.hide()
+  if (app.dock) app.dock.show()
   if (isDev) {
     const loadDev = async () => {
       const { installDevTools, startCpuMonitoring } = await import('./dev')
@@ -325,16 +325,16 @@ app.on('ready', () => {
   })
 })
 
-ipcMain.on('tray:action', (e, action, ...args) => {
+walletIPC('tray:action', (e, action, ...args) => {
   if (store[action]) return store[action](...args)
   log.info('Tray sent unrecognized action: ', action)
 })
 
 app.on('second-instance', (event, argv, workingDirectory) => {
   log.info(`second instance requested from directory: ${workingDirectory}`)
-  windows.showTray()
+  windows.showHome()
 })
-app.on('activate', () => windows.showTray())
+app.on('activate', () => windows.showHome())
 
 app.on('before-quit', () => {
   if (!updater.updateReady) {

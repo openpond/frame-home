@@ -67,7 +67,13 @@ const handler = (socket: FrameWebSocket, req: IncomingMessage) => {
 
   socket.on('message', async (data) => {
     const rawPayload = validPayload<ExtensionPayload>(data.toString())
-    if (!rawPayload) return console.warn('Invalid Payload', data)
+    if (!rawPayload)
+      return res({ id: 0, jsonrpc: '2.0', error: { code: -32600, message: 'Invalid request' } })
+    rawPayload.__extensionConnecting = !!(
+      socket.frameExtension &&
+      rawPayload.__extensionConnecting &&
+      ['eth_chainId', 'net_version'].includes(rawPayload.method)
+    )
 
     let requestOrigin = socket.origin
     if (socket.frameExtension) {
@@ -121,6 +127,19 @@ const handler = (socket: FrameWebSocket, req: IncomingMessage) => {
       if (rawPayload.method === 'net_version') return res({ id, jsonrpc, result: parseInt(chainId, 16) })
     }
 
+    if (
+      payload.method === 'eth_unsubscribe' &&
+      payload.params.some(
+        (sub: string) => subs[sub]?.socket !== socket || subs[sub]?.originId !== payload._origin
+      )
+    ) {
+      return res({
+        id: payload.id,
+        jsonrpc: payload.jsonrpc,
+        error: { code: 4001, message: 'Subscription belongs to another session' }
+      })
+    }
+
     if (protectedMethods.indexOf(payload.method) > -1 && !(await isTrusted(payload))) {
       let error = { message: 'Permission denied, approve ' + origin + ' in Frame to continue', code: 4001 }
       // review
@@ -167,13 +186,13 @@ const handler = (socket: FrameWebSocket, req: IncomingMessage) => {
 }
 
 export default function (server: Server) {
-  const ws = new WebSocket.Server({ server })
+  const ws = new WebSocket.Server({ server, maxPayload: 1024 * 1024 })
   ws.on('connection', handler)
 
   provider.on('data:subscription', (payload: RPC.Susbcription.Response) => {
     const subscription = subs[payload.params.subscription]
 
-    if (subscription) {
+    if (subscription && subscription.socket.readyState === WebSocket.OPEN) {
       subscription.socket.send(JSON.stringify(payload))
     }
   })

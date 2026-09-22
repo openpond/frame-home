@@ -1,10 +1,23 @@
-import { BrowserWindow, BrowserView, BrowserWindowConstructorOptions, shell } from 'electron'
+import {
+  BrowserWindow,
+  BrowserView,
+  BrowserWindowConstructorOptions,
+  IpcMainEvent,
+  WebContents,
+  shell
+} from 'electron'
 import log from 'electron-log'
 import path from 'path'
 
 import store from '../store'
 
 import type { ChainId } from '../store/state'
+
+const walletContents = new WeakSet<WebContents>()
+
+export function isWalletSender(event: IpcMainEvent) {
+  return walletContents.has(event.sender) && event.senderFrame === event.sender.mainFrame
+}
 
 export function createWindow(
   name: string,
@@ -15,12 +28,12 @@ export function createWindow(
 
   const browserWindow = new BrowserWindow({
     ...opts,
-    frame: false,
+    frame: name === 'home',
     acceptFirstMouse: true,
-    transparent: process.platform === 'darwin',
+    transparent: name !== 'home' && process.platform === 'darwin',
     show: false,
     backgroundColor: store('main.colorwayPrimary', store('main.colorway'), 'background'),
-    skipTaskbar: process.platform !== 'linux',
+    skipTaskbar: name !== 'home' && process.platform !== 'linux',
     webPreferences: {
       ...webPreferences,
       preload: path.resolve(process.env.BUNDLE_LOCATION, 'bridge.js'),
@@ -35,6 +48,8 @@ export function createWindow(
       disableBlinkFeatures: 'Auxclick'
     }
   })
+
+  walletContents.add(browserWindow.webContents)
 
   browserWindow.webContents.once('did-finish-load', () => {
     log.info(`Created ${name} renderer process, pid:`, browserWindow.webContents.getOSProcessId())

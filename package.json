@@ -12,7 +12,7 @@
     "setup:scripts": "allow-scripts",
     "setup": "npm run setup:deps && husky install",
     "start": "npm run launch",
-    "bundle": "npm run bundle:bridge && npm run bundle:tray && npm run bundle:dash && npm run bundle:dapp && npm run bundle:onboard && npm run bundle:notify && npm run bundle:dapp:inject",
+    "bundle": "npm run bundle:bridge && npm run bundle:tray && npm run bundle:dash && npm run bundle:dapp && npm run bundle:onboard && npm run bundle:notify && npm run bundle:dapp:inject && npm run bundle:home",
     "bundle:bridge": "npm run parcel:build -- --target bridge resources/bridge/index.js",
     "bundle:tray": "npm run parcel:build -- --target tray app/tray/index.html",
     "bundle:dash": "npm run parcel:build -- --target dash app/dash/index.html",
@@ -52,7 +52,9 @@
     "test:unit:components": "npm run test:exec -- --env=jsdom --roots test/app test/resources/Hooks test/resources/Components --testTimeout=500",
     "test:e2e": "npm run test:exec -- --env=node --config ./jest.e2e.config.json ./test/e2e",
     "test:usbAdapters": "ELECTRON_RUN_AS_NODE=true ./node_modules/.bin/electron ./node_modules/jest/bin/jest.js ./test/main/signers/ledger/adapter.test.js --testPathIgnorePatterns=''",
-    "local:rpc": "ganache-cli --account=\"0x2d6945dbddb8dcf5492004e6f720f8e971196ff61a61c4be99714ebc71e06c00,  5000000000000000000000\" --account=\"0xaef6a68a47c1628081e4e6df195f5f712ae4eb7da332a6d74dca06ae32a3e7ae,5000\""
+    "local:rpc": "ganache-cli --account=\"0x2d6945dbddb8dcf5492004e6f720f8e971196ff61a61c4be99714ebc71e06c00,  5000000000000000000000\" --account=\"0xaef6a68a47c1628081e4e6df195f5f712ae4eb7da332a6d74dca06ae32a3e7ae,5000\"",
+    "bundle:home": "npm run parcel:build -- --target home app/home/index.html",
+    "package:home": "npm run compile && npm run bundle && electron-builder --dir --config=build/electron-builder-home.js"
   },
   "author": {
     "name": "Frame Labs",
@@ -241,6 +243,9 @@
     },
     "default": {
       "distDir": "./bundle"
+    },
+    "home": {
+      "context": "browser"
     }
   },
   "repository": "github:floating/frame",
@@ -287,5 +292,6 @@
       "ws>bufferutil": false,
       "ws>utf-8-validate": false
     }
-  }
+  },
+  "home": "./bundle/home.html"
 }

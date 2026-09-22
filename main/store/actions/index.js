@@ -688,6 +688,8 @@ module.exports = {
       return colorway
     })
   },
+  setHomeVisible: (u, visible) => u('home.visible', () => visible),
+  setHomeScanStatus: (u, status) => u('home.scan', () => status),
   // Dashboard
   toggleDash: (u, force) => {
     u('windows.dash.showing', (s) => (force === 'hide' ? false : force === 'show' ? true : !s))

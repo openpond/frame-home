@@ -12,8 +12,8 @@ import link from '../resources/link'
 
 import * as actions from '../resources/store/actions.panel'
 
-export default (state, _cb) => {
-  const store = Restore.create(state, actions)
+export default (state, _cb, localActions = {}) => {
+  const store = Restore.create(state, { ...actions, ...localActions })
   store.events = new EventEmitter()
 
   // Feed for relaying state updates

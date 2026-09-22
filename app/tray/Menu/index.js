@@ -56,6 +56,14 @@ class Menu extends React.Component {
         >
           {this.glitch(svg.send(15), this.state.glitchOnSend)}
         </div>
+        <button
+          className='panelMenuItem panelMenuItemClose'
+          aria-label='Close wallet'
+          title='Close wallet'
+          onClick={() => link.send('wallet:close')}
+        >
+          {svg.x(16)}
+        </button>
       </div>
     )
   }

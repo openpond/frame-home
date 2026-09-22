@@ -71,7 +71,7 @@ class Dash extends React.Component {
 
     return (
       <div className='dash'>
-        <Command />
+        {!this.props.embedded && <Command />}
         <div className='dashMain' style={{ bottom: showAddButton ? '120px' : '40px' }}>
           <div className='dashMainOverlay' />
           <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>

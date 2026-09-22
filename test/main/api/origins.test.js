@@ -106,25 +106,25 @@ describe('#updateOrigin', () => {
     it('parses an origin using ws:// protocol', () => {
       const origin = parseOrigin('ws://frame.eth')
 
-      expect(origin).toBe('frame.eth')
+      expect(origin).toBe('ws://frame.eth')
     })
 
     it('parses an origin using wss:// protocol', () => {
       const origin = parseOrigin('wss://pylon.frame.eth')
 
-      expect(origin).toBe('pylon.frame.eth')
+      expect(origin).toBe('wss://pylon.frame.eth')
     })
 
     it('parses an origin using http:// protocol', () => {
       const origin = parseOrigin('http://test-case.frame.io')
 
-      expect(origin).toBe('test-case.frame.io')
+      expect(origin).toBe('http://test-case.frame.io')
     })
 
     it('parses an origin using https:// protocol', () => {
       const origin = parseOrigin('https://www.google.com')
 
-      expect(origin).toBe('www.google.com')
+      expect(origin).toBe('https://www.google.com')
     })
 
     it('does not change an origin using an extension protocol', () => {

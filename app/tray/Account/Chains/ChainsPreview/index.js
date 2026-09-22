@@ -40,7 +40,12 @@ class ChainsPreview extends React.Component {
   }
 
   componentDidMount() {
-    if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
+    if (this.resizeObserver && this.moduleRef.current) this.resizeObserver.observe(this.moduleRef.current)
+  }
+
+  componentDidUpdate() {
+    // The monitor can first render after a chain is added to an empty account.
+    if (this.resizeObserver && this.moduleRef.current) this.resizeObserver.observe(this.moduleRef.current)
   }
 
   componentWillUnmount() {

@@ -216,3 +216,13 @@ function respondToTokenCall(payload) {
 
   return callResponse
 }
+
+test('a failed native-balance RPC does not fabricate zero or overwrite cached holdings', async () => {
+  const provider = ethProvider()
+  provider.request.mockImplementation(({ chainId }) =>
+    chainId === '0x1' ? Promise.reject(new Error('RPC unavailable')) : Promise.resolve('0x0')
+  )
+  const result = await balanceLoader(provider).getCurrencyBalances(ownerAddress, [1, 10])
+  expect(result).toHaveLength(1)
+  expect(result[0]).toMatchObject({ chainId: 10, balance: '0x0' })
+})

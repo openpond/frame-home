@@ -35,22 +35,30 @@ function parseChainId(chainId: string) {
 
 // TODO: move this into requests parsing module
 export function normalizeChainId(tx: RPC.SendTransaction.TxParams, targetChain?: number) {
-  if (!tx.chainId) return tx
+  // Some JSON-RPC clients (including Foundry's unlocked sender) use the
+  // transaction-response name `input` for eth_sendTransaction calldata.
+  // ethereumjs expects `data`; leaving the alias untouched signs an empty
+  // contract-creation transaction.
+  const { input, ...transaction } = tx as RPC.SendTransaction.TxParams & { input?: string }
+  const normalizedTransaction =
+    transaction.data === undefined && input !== undefined ? { ...transaction, data: input } : transaction
 
-  const chainId = parseChainId(tx.chainId)
+  if (!normalizedTransaction.chainId) return normalizedTransaction
+
+  const chainId = parseChainId(normalizedTransaction.chainId)
 
   if (!chainId) {
-    throw new Error(`Chain for transaction (${tx.chainId}) is not a hex-prefixed string`)
+    throw new Error(`Chain for transaction (${normalizedTransaction.chainId}) is not a hex-prefixed string`)
   }
 
   if (targetChain && targetChain !== chainId) {
     throw new Error(
-      `Chain for transaction (${tx.chainId}) does not match request target chain (${targetChain})`
+      `Chain for transaction (${normalizedTransaction.chainId}) does not match request target chain (${targetChain})`
     )
   }
 
   return {
-    ...tx,
+    ...normalizedTransaction,
     chainId: addHexPrefix(chainId.toString(16))
   }
 }

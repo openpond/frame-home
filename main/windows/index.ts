@@ -26,10 +26,7 @@ const frameManager = new FrameManager()
 const isDev = process.env.NODE_ENV === 'development'
 const devToolsEnabled = isDev || process.env.ENABLE_DEV_TOOLS === 'true'
 const fullheight = !!process.env.FULL_HEIGHT
-const openedAtLogin =
-  electronApp?.getLoginItemSettings() && electronApp.getLoginItemSettings().wasOpenedAtLogin
 const windows: Windows = {}
-const showOnReady = true
 const trayWidth = 400
 const devHeight = 800
 const isWindows = process.platform === 'win32'
@@ -66,6 +63,7 @@ const systemTrayEventHandlers: SystemTrayEventHandlers = {
       app.toggle()
     }
   },
+  clickHome: () => showHome(),
   clickHide: () => app.hide(),
   clickShow: () => app.show()
 }
@@ -130,6 +128,47 @@ function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) 
   windows[id].loadURL(url.toString())
 }
 
+// Home is a regular desktop window; tray summon/dismiss never hides it.
+function showHome() {
+  if (!windows.home || windows.home.isDestroyed()) {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize
+    initWindow('home', {
+      title: 'Frame Home',
+      width: Math.min(1240, width),
+      height: Math.min(840, height),
+      minWidth: Math.min(760, width),
+      minHeight: Math.min(520, height),
+      icon: path.join(__dirname, './AppIcon.png')
+    })
+    windows.home.setMenuBarVisibility(false)
+    windows.home.once('ready-to-show', () => windows.home?.show())
+    windows.home.on('show', () => store.setHomeVisible(true))
+    windows.home.on('hide', () => store.setHomeVisible(false))
+    windows.home.on('closed', () => {
+      store.setHomeVisible(false)
+      delete windows.home
+    })
+    windows.home.webContents.session.setPermissionRequestHandler((_contents, _permission, done) =>
+      done(false)
+    )
+    return
+  }
+  if (windows.home.isMinimized()) windows.home.restore()
+  windows.home.show()
+  windows.home.focus()
+}
+
+ipcMain.on('home:openWallet', (event) => {
+  if (event.sender === windows.home?.webContents) tray.show()
+})
+
+ipcMain.on('wallet:close', (event) => {
+  if (event.sender !== windows.tray?.webContents && event.sender !== windows.dash?.webContents) return
+  store.toggleDash('hide')
+  tray.hide(true)
+  dash.hide('app', true)
+})
+
 function initTrayWindow() {
   const trayOpts: Electron.BrowserWindowConstructorOptions = {
     width: trayWidth,
@@ -182,14 +221,7 @@ function initTrayWindow() {
         }
       }, 100)
     })
-    windows.tray.focus()
   }, 1260)
-
-  windows.tray.once('ready-to-show', () => {
-    if (!openedAtLogin) {
-      tray.show()
-    }
-  })
 
   setTimeout(() => {
     screen.on('display-added', () => tray.hide())
@@ -219,31 +251,8 @@ export class Tray {
     this.readyHandler = () => {
       this.ready = true
       systemTray.init(windows.tray)
-      systemTray.setContextMenu('hide', { displaySummonShortcut: getDisplaySummonShortcut() })
-      if (showOnReady) {
-        store.trayOpen(true)
-      }
-
-      const showOnboardingWindow = !store('main.mute.onboardingWindow')
-      const showNotifyWindow = !store('main.mute.migrateToPylon')
-
-      if (store('windows.dash.showing') || showOnboardingWindow) {
-        setTimeout(() => {
-          store.setDash({ showing: true })
-        }, 300)
-      }
-
-      if (showOnboardingWindow && !showNotifyWindow) {
-        setTimeout(() => {
-          store.setOnboard({ showing: true })
-        }, 600)
-      }
-
-      if (showNotifyWindow) {
-        setTimeout(() => {
-          store.setNotify({ showing: true })
-        }, 600)
-      }
+      systemTray.setContextMenu('show', { displaySummonShortcut: getDisplaySummonShortcut() })
+      store.trayOpen(false)
     }
     ipcMain.once('tray:ready', this.readyHandler)
     initTrayWindow()
@@ -271,8 +280,8 @@ export class Tray {
     return autoHideOn && !dashShowing && !onboardShowing && !isFrameShowing
   }
 
-  hide() {
-    if (this.recentDisplayEvent || !windows.tray?.isVisible()) {
+  hide(force = false) {
+    if ((!force && this.recentDisplayEvent) || !windows.tray?.isVisible()) {
       return
     }
     clearTimeout(this.recentDisplayEventTimeout)
@@ -366,8 +375,8 @@ class Dash {
     initWindow('dash', dashOpts)
   }
 
-  public hide(context?: string) {
-    if (this.recentDisplayEvent || !windows.dash?.isVisible()) {
+  public hide(context?: string, force = false) {
+    if ((!force && this.recentDisplayEvent) || !windows.dash?.isVisible()) {
       return
     }
     if (context === 'app') {
@@ -394,6 +403,7 @@ class Dash {
       this.recentDisplayEvent = false
     }, 150)
     setTimeout(() => {
+      if (!store('windows.dash.showing')) return
       if (isMacOS) {
         windows.dash.setPosition(0, 0)
       } else {
@@ -622,8 +632,12 @@ const init = () => {
     tray.destroy()
   }
 
+  store.setDash({ showing: false })
+  store.setOnboard({ showing: false })
+  store.setNotify({ showing: false })
   tray = new Tray()
   dash = new Dash()
+  showHome()
 
   if (!store('main.mute.onboardingWindow')) {
     onboard = new Onboard()
@@ -639,7 +653,7 @@ const init = () => {
       dash.show()
     } else {
       dash.hide()
-      windows.tray.focus()
+      if (tray.isVisible()) windows.tray.focus()
     }
   }, 'windows:dash')
 
@@ -652,7 +666,7 @@ const init = () => {
       onboard.show()
     } else if (onboard) {
       onboard.hide()
-      windows.tray.focus()
+      if (tray.isVisible()) windows.tray.focus()
     }
   }, 'windows:onboard')
 
@@ -665,7 +679,7 @@ const init = () => {
       notify.show()
     } else if (notify) {
       notify.hide()
-      windows.tray.focus()
+      if (tray.isVisible()) windows.tray.focus()
     }
   }, 'windows:notify')
 
@@ -707,6 +721,7 @@ store.api.feed((_state, actions) => {
 })
 
 export default {
+  showHome,
   toggleTray() {
     tray.toggle()
   },

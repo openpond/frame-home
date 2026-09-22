@@ -1,33 +1,53 @@
-name: Compile and run unit tests
+name: Verify Frame Home
 
 on:
-  push:
-    branches:
-      - 'beta.*'
-      - 'canary'
-      - 'develop'
   pull_request:
+  push:
+    branches: [develop]
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit to verify and package
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  verify:
+    name: Verify
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: 18.12.1
-      - name: Electronegativity
-        uses: doyensec/electronegativity-action@v2.0
-      - name: Upload sarif
-        uses: github/codeql-action/upload-sarif@v2
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          sarif_file: ../electronegativity_results
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-      - run: |
-          sudo apt update -y
-          sudo apt install -y libudev-dev
+          node-version: '22'
+          cache: npm
+      - name: Install native build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libudev-dev libusb-1.0-0-dev
       - run: npm run setup:ci
+      - name: Test release validation
+        run: node --test test/scripts/release.test.mjs
       - run: npm run compile
       - run: npm run test:unit
+      - run: npm run bundle
+      - name: Package Frame Home for Linux x64
+        run: npx electron-builder --linux tar.gz --x64 --publish never --config=build/electron-builder-home.js
+      - name: Record archive checksum
+        working-directory: dist/home
+        run: sha256sum ./*.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frame-home-linux-x64
+          path: |
+            dist/home/*.tar.gz
+            dist/home/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

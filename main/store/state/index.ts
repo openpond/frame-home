@@ -160,7 +160,8 @@ const mainState: M = {
   accountsMeta: main('accountsMeta', {}),
   addresses: main('addresses', {}), // Should be removed after 0.5 release
   permissions: main('permissions', {}),
-  balances: {},
+  // Retain the last snapshot while Home refreshes balances across saved accounts.
+  balances: main('balances', {}),
   tokens: main('tokens', { custom: [], known: {} }),
   rates: {}, // main('rates', {}),
   inventory: {}, // main('rates', {}),

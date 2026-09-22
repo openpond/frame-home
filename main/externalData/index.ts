@@ -5,6 +5,7 @@ import store from '../store'
 import Inventory from './inventory'
 import Rates from './assets'
 import Balances from './balances'
+import portfolioScanner from './portfolio'
 import { arraysMatch, debounce } from '../../resources/utils'
 
 import type { Chain, Token } from '../store/state'
@@ -39,6 +40,14 @@ export default function () {
   inventory.start()
   rates.start()
   balances.start()
+  const portfolio = portfolioScanner({
+    addresses: () => Object.keys(store('main.accounts') || {}),
+    chains: () => storeApi.getConnectedNetworks().map((network) => network.id),
+    visible: () => !!store('home.visible'),
+    ready: balances.isReady,
+    scan: balances.refreshAccount,
+    report: (accounts, chains) => store.setHomeScanStatus({ accounts, chains })
+  })
 
   const handleNetworkUpdate = debounce((newlyConnected: number[]) => {
     log.verbose('updating external data due to network update(s)', { connectedChains, newlyConnected })
@@ -94,13 +103,18 @@ export default function () {
     }
   }, 'externalData:activeAccount')
 
+  const portfolioTokensObserver = store.observer(() => {
+    store('main.tokens.known')
+    rates.updateSubscription(connectedChains, activeAccount)
+  }, 'externalData:portfolioTokens')
+
   const customTokensObserver = store.observer(() => {
     const customTokens = storeApi.getCustomTokens()
     handleTokensUpdate(customTokens)
   }, 'externalData:customTokens')
 
   const trayObserver = store.observer(() => {
-    const open = store('tray.open')
+    const open = store('tray.open') || store('home.visible')
 
     if (!open) {
       // pause balance scanning after the tray is out of view for one minute
@@ -122,8 +136,10 @@ export default function () {
       allNetworksObserver.remove()
       activeAddressObserver.remove()
       customTokensObserver.remove()
+      portfolioTokensObserver.remove()
       trayObserver.remove()
 
+      portfolio.close()
       inventory.stop()
       rates.stop()
       balances.stop()

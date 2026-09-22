@@ -9,6 +9,7 @@ const bundler = new Parcel({
   defaultConfig: '@parcel/config-default',
   entries: [
     'app/tray/index.dev.html',
+    'app/home/index.dev.html',
     'app/dash/index.dev.html',
     'app/dapp/index.dev.html',
     'app/onboard/index.dev.html',

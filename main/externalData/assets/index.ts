@@ -15,6 +15,7 @@ interface RateUpdate {
 }
 
 export default function rates(pylon: Pylon, store: Store) {
+  let subscriptionKey = ''
   const storeApi = {
     getKnownTokens: (address?: Address) =>
       ((address && store('main.tokens.known', address)) || []) as Token[],
@@ -51,7 +52,7 @@ export default function rates(pylon: Pylon, store: Store) {
         // address is always defined for tokens
         const address = update.id.address as string
 
-        allRates[address] = {
+        allRates[`${update.id.chainId}:${address.toLowerCase()}`] = {
           usd: {
             price: update.data.usd,
             change24hr: update.data.usd_24h_change
@@ -67,7 +68,16 @@ export default function rates(pylon: Pylon, store: Store) {
 
   function updateSubscription(chains: number[], address?: Address) {
     const subscribedCurrencies = chains.map((chainId) => ({ type: AssetType.NativeCurrency, chainId }))
-    const knownTokens = storeApi.getKnownTokens(address).filter((token) => chains.includes(token.chainId))
+    const accounts = Object.keys(store('main.accounts') || {})
+    if (address && !accounts.includes(address)) accounts.push(address)
+    const allKnown = accounts.flatMap((account) => storeApi.getKnownTokens(account))
+    const knownTokens = [
+      ...new Map(
+        allKnown
+          .filter((token) => chains.includes(token.chainId))
+          .map((token) => [`${token.chainId}:${token.address.toLowerCase()}`, token])
+      ).values()
+    ]
     const customTokens = storeApi
       .getCustomTokens()
       .filter(
@@ -94,10 +104,16 @@ export default function rates(pylon: Pylon, store: Store) {
 
     pylon.off('rates', handleRatesUpdates)
 
+    subscriptionKey = ''
     pylon.rates([])
   }
 
   function setAssets(assetIds: AssetId[]) {
+    const key = JSON.stringify(
+      assetIds.map((asset) => `${asset.type}:${asset.chainId}:${asset.address || ''}`).sort()
+    )
+    if (key === subscriptionKey) return
+    subscriptionKey = key
     log.verbose(
       'subscribing to rates updates for native currencies on chains:',
       assetIds.filter((a) => a.type === AssetType.NativeCurrency).map((a) => a.chainId)

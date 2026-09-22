@@ -28,6 +28,7 @@ if (process.platform === 'linux') {
 const delaySettingContextMenu = () => !isMacOS && !isUbuntu23OrGreater
 
 export type SystemTrayEventHandlers = {
+  clickHome: () => void
   click: () => void
   clickShow: () => void
   clickHide: () => void
@@ -85,7 +86,12 @@ export class SystemTray {
       actionMenuItem.registerAccelerator = false
     }
 
-    const menu = Menu.buildFromTemplate([actionMenuItem, separatorMenuItem, quitMenuItem])
+    const menu = Menu.buildFromTemplate([
+      { label: 'Open Home', click: () => this.clickHandlers.clickHome() },
+      actionMenuItem,
+      separatorMenuItem,
+      quitMenuItem
+    ])
 
     if (switchScreen) {
       this.electronTray?.setContextMenu(menu)

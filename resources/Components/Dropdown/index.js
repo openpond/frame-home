@@ -5,7 +5,15 @@ function findIndex(options, value) {
   return index >= 0 ? index : undefined
 }
 
-const Dropdown = ({ options, syncValue, initialValue, style, className = '', onChange }) => {
+const Dropdown = ({
+  options,
+  syncValue,
+  initialValue,
+  style,
+  className = '',
+  onChange,
+  fullText = false
+}) => {
   const [selectedIndex, setSelectedIndex] = useState(
     findIndex(options, syncValue || initialValue) || options[0]
   )
@@ -74,7 +82,7 @@ const Dropdown = ({ options, syncValue, initialValue, style, className = '', onC
                 value={option.value}
                 onMouseDown={() => handleSelect(option, index)}
               >
-                {text}
+                {fullText ? option.text : text}
                 {indicator(option)}
               </div>
             )

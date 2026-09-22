@@ -1,0 +1,36 @@
+{
+  "source": "app/home/portfolio.js",
+  "node": "v24.18.0",
+  "cpu": "Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz",
+  "measuredAt": "2026-09-21T04:21:38.915Z",
+  "note": "Pure derivation only; synthetic data; no React DOM, IPC, disk, or RPC timing.",
+  "results": [
+    {
+      "accountCount": 20,
+      "tokensPerAccount": 50,
+      "positions": 1000,
+      "renderedAssetRows": 50,
+      "samples": 25,
+      "p50ms": 9.51,
+      "p95ms": 12.82
+    },
+    {
+      "accountCount": 20,
+      "tokensPerAccount": 250,
+      "positions": 5000,
+      "renderedAssetRows": 250,
+      "samples": 25,
+      "p50ms": 44.47,
+      "p95ms": 53.58
+    },
+    {
+      "accountCount": 100,
+      "tokensPerAccount": 500,
+      "positions": 50000,
+      "renderedAssetRows": 500,
+      "samples": 25,
+      "p50ms": 483.19,
+      "p95ms": 598.36
+    }
+  ]
+}

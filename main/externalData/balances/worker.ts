@@ -21,6 +21,7 @@ interface ExternalDataWorkerMessage {
 
 let heartbeat: NodeJS.Timeout
 let balances: BalanceLoader
+const discoveries = new Map<string, number>()
 
 const eth = ethProvider('frame', { origin: 'frame-internal', name: 'scanWorker' })
 const tokenLoader = new TokenLoader()
@@ -74,13 +75,14 @@ async function tokenBalanceScan(address: Address, tokensToOmit: Token[] = [], ch
     const tokenList = tokenLoader.getTokens(eligibleChains)
     const tokens = tokenList.filter((token) => !omitSet.has(toTokenId(token)))
 
-    const tokenBalances = (await balances.getTokenBalances(address, tokens)).filter(
-      (balance) => parseInt(balance.balance) > 0
-    )
+    const results = await balances.getTokenBalances(address, tokens)
+    const tokenBalances = results.filter((balance) => parseInt(balance.balance) > 0)
 
     sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+    return results.length === tokens.length
   } catch (e) {
     log.error('error scanning for token balances', e)
+    return false
   }
 }
 
@@ -91,8 +93,10 @@ async function fetchTokenBalances(address: Address, tokens: Token[]) {
     const tokenBalances = await balances.getTokenBalances(address, filteredTokens)
 
     sendToMainProcess({ type: 'tokenBalances', address, balances: tokenBalances })
+    return tokenBalances.length === filteredTokens.length
   } catch (e) {
     log.error('error fetching token balances', e)
+    return false
   }
 }
 
@@ -102,8 +106,10 @@ async function chainBalanceScan(address: string, chains?: number[]) {
     const chainBalances = await balances.getCurrencyBalances(address, availableChains)
 
     sendToMainProcess({ type: 'chainBalances', balances: chainBalances, address })
+    return chainBalances.length === availableChains.length
   } catch (e) {
     log.error('error scanning chain balance', e)
+    return false
   }
 }
 
@@ -122,18 +128,28 @@ function resetHeartbeat() {
 }
 
 const messageHandler: { [command: string]: (...params: any) => void } = {
-  updateChainBalance: chainBalanceScan,
-  fetchTokenBalances: fetchTokenBalances,
-  heartbeat: resetHeartbeat,
-  tokenBalanceScan: (address, tokensToOmit, chains) => {
-    updateBlacklist(address, chains)
-    tokenBalanceScan(address, tokensToOmit, chains)
-  }
+  scanAccount: async (scanId: number, address: Address, tokens: Token[], chains: number[]) => {
+    const key = `${address}:${chains
+      .slice()
+      .sort((a, b) => a - b)
+      .join(',')}`
+    const discover = !discoveries.has(key) || Date.now() - (discoveries.get(key) || 0) >= 600_000
+    const results = await Promise.all([
+      chainBalanceScan(address, chains),
+      fetchTokenBalances(address, tokens),
+      discover ? tokenBalanceScan(address, tokens, chains) : Promise.resolve(true)
+    ])
+    if (discover && results[2]) discoveries.set(key, Date.now())
+    if (discover) await updateBlacklist(address, chains)
+    sendToMainProcess({ type: 'accountScanComplete', scanId, complete: results.every(Boolean) })
+  },
+  heartbeat: resetHeartbeat
 }
 
 process.on('message', (message: ExternalDataWorkerMessage) => {
   log.debug(`received message: ${message.command} [${message.args}]`)
 
   const args = message.args || []
-  messageHandler[message.command](...args)
+  if (Object.prototype.hasOwnProperty.call(messageHandler, message.command))
+    messageHandler[message.command](...args)
 })

@@ -78,4 +78,16 @@ describe('#normalizeChainId', () => {
       /chain for transaction.*does not match request target chain/i
     )
   })
+
+  it('normalizes the transaction input alias to data', () => {
+    const tx = { chainId: '0x1', input: '0x60006000' }
+
+    expect(normalizeChainId(tx)).toStrictEqual({ chainId: '0x1', data: '0x60006000' })
+  })
+
+  it('prefers explicit data when input is also provided', () => {
+    const tx = { chainId: '0x1', data: '0x1234', input: '0x60006000' }
+
+    expect(normalizeChainId(tx)).toStrictEqual({ chainId: '0x1', data: '0x1234' })
+  })
 })

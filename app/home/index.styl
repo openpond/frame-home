@@ -1,0 +1,367 @@
+// Frame's existing navigation styling. Colors, fonts and shared components
+// come from resources/base.styl; this file only adapts the desktop layout.
+@import '../dash/index'
+
+html, body
+  margin 0
+  overflow auto
+  font-family 'MainFont'
+  font-weight 300
+  color var(--outerspace)
+  background var(--ghostA)
+
+*
+  box-sizing border-box
+
+button, input, select
+  font-family inherit
+  font-weight inherit
+  color inherit
+
+button
+  cursor pointer
+
+button:focus-visible, input:focus-visible, select:focus-visible
+  outline 2px solid var(--good)
+  outline-offset 2px
+
+.homeLayout
+  min-height 100vh
+  display flex
+
+.homeNavigation
+  width 224px
+  padding 12px 8px
+  position fixed
+  top 0
+  left 0
+  bottom 0
+  overflow-y auto
+  background var(--ghostZ)
+
+  .homeLogo
+    height 70px
+    display flex
+    align-items center
+    justify-content center
+
+  .dashModule
+    width calc(100% - 12px)
+    height 78px
+    border-top 0
+    border-left 0
+    border-right 0
+    justify-content flex-start
+    padding-left 22px
+
+  .homeActive
+    color var(--good)
+
+.homeHoldings
+  margin-left 224px
+  width calc(100% - 224px)
+  padding 24px 20px
+
+.homeTop
+  display flex
+  align-items center
+  justify-content space-between
+  min-height 70px
+  margin 0px 6px 28px
+  gap 16px
+
+.homeTotal
+  font-family 'FiraCode'
+  font-weight 300
+  font-size 30px
+  letter-spacing -1px
+  color var(--mint)
+
+.homeTopControls
+  display flex
+  align-items center
+  gap 10px
+
+  > .cluster
+    margin 0
+
+.homeNetwork
+  width 148px
+  height 44px
+  position relative
+  z-index 10
+
+  .dropdownWrap
+    width 100%
+    height 100%
+
+  .dropdown
+    width 100%
+    top 0
+    height 44px
+    padding-top 6px
+    padding-bottom 6px
+    text-transform none
+    letter-spacing 0
+
+  .dropdownExpanded
+    height auto
+
+  .dropdownItem
+    font-size 13px
+    text-transform none
+    letter-spacing 0
+
+.homeControl
+  border 0
+  background transparent
+  padding 14px 18px
+  white-space nowrap
+  font-size 14px
+
+.homeListHeader
+  margin 0px 14px 12px
+  display flex
+  flex-wrap wrap
+  justify-content space-between
+  align-items center
+  gap 12px
+
+  h1
+    font-size 18px
+    font-weight 300
+    margin 0
+
+.homeFilters
+  display flex
+  align-items center
+  flex-wrap wrap
+  gap 10px
+
+  > input, select
+    background var(--ghostZ)
+    border 0
+    border-radius 12px
+    padding 10px 12px
+    font-size 12px
+    min-width 0
+    max-width 160px
+
+  input::placeholder
+    color var(--outerspace06)
+
+  label
+    display flex
+    align-items center
+    font-size 12px
+    color var(--outerspace08)
+
+  input[type='checkbox']
+    accent-color var(--good)
+
+.homeList
+  width 100%
+  overflow-x auto
+
+  table
+    width 100%
+    border-collapse collapse
+    font-size 14px
+
+  th
+    text-align left
+    font-size 12px
+    font-weight 300
+    color var(--outerspace06)
+    padding 18px 16px 14px
+
+  td
+    border-top 1px solid var(--ghostZ)
+    padding 14px 16px
+    font-weight 300
+
+  small
+    display block
+    margin-top 5px
+    font-size 11px
+    color var(--outerspace06)
+
+  .numeric
+    text-align right
+    white-space nowrap
+    font-family 'FiraCode'
+    font-weight 200
+    font-size 13px
+    letter-spacing -0.5px
+
+  .homeValue
+    color var(--mint)
+
+.homeAsset
+  display flex
+  align-items center
+  gap 10px
+  min-width 110px
+
+  .ringIcon
+    flex-shrink 0
+
+.homeChain
+  font-size 12px
+
+.homeAccountLink
+  text-align left
+  border 0
+  padding 0
+  background transparent
+  font-size 13px
+
+  small
+    font-family 'FiraCode'
+    font-weight 200
+
+  &:hover
+    color var(--good)
+
+.homeSnapshot
+  margin 16px 14px
+  font-size 12px
+  color var(--outerspace06)
+  line-height 1.6
+
+.homeEmpty
+  padding 35px 20px
+  text-align center
+  font-size 14px
+  color var(--outerspace08)
+
+.homeError
+  color var(--bad)
+  font-size 13px
+  padding 0 14px
+
+@media (max-width: 980px)
+  .homeNavigation
+    width 180px
+    .dashModule
+      font-size 15px
+      padding-left 15px
+      height 70px
+      .dashModuleIcon
+        margin-right 12px
+  .homeHoldings
+    margin-left 180px
+    width calc(100% - 180px)
+    padding 18px 10px
+  .homeTotal
+    font-size 24px
+  .homeTopControls
+    gap 6px
+  .homeNetwork
+    width 120px
+  .homeControl
+    padding 14px 12px
+  .homeList
+    td, th
+      padding-left 12px
+      padding-right 12px
+
+
+.homeViewHeading
+  display flex
+  align-items center
+  gap 12px
+
+  h1
+    margin 0
+    font-size 26px
+    font-weight 300
+
+  button
+    border 0
+    border-radius 12px
+    background var(--ghostZ)
+    width 40px
+    height 40px
+    display flex
+    align-items center
+    justify-content center
+
+.homeWorkspace
+  position relative
+  height calc(100vh - 170px)
+  min-height 380px
+
+  .dash
+    overflow hidden
+
+    .dashMain
+      top 0
+      bottom 80px !important
+
+    .dashFooter
+      bottom 0
+
+  .dash .signers .signersList
+    display grid
+    grid-template-columns repeat(auto-fit, minmax(320px, 1fr))
+    align-items start
+    gap 12px
+
+  .signer
+    min-width 0
+
+  .expandedSigner, .addAccounts, .newTokenView
+    max-width 720px
+    margin-left auto
+    margin-right auto
+
+.homeHoldersToggle
+  display flex
+  align-items center
+  justify-content space-between
+  gap 16px
+  min-width 140px
+  width 100%
+  text-align left
+  border 0
+  background transparent
+  padding 0
+  font-size 13px
+
+  &:hover
+    color var(--good)
+
+.homeList .homeBreakdownRow > td
+  padding 0 16px 16px
+  border-top 0
+
+.homeAccountBreakdown
+  padding 0 16px
+  border-radius 16px
+  background var(--ghostZ)
+
+.homeAccountPosition
+  display grid
+  grid-template-columns minmax(140px, 1fr) minmax(160px, 1.5fr) minmax(100px, 1fr) minmax(85px, 0.7fr)
+  gap 16px
+  align-items center
+  padding 16px 0
+
+  + .homeAccountPosition
+    border-top 1px solid var(--ghostA)
+
+.homePositionNetworks
+  small
+    margin 3px 0
+    font-size 11px
+
+  .displayValue
+    display inline-flex
+
+.homeHoldersChevron
+  display flex
+  transform rotate(180deg)
+
+.homeHoldersChevronOpen
+  transform rotate(0deg)

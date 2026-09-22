@@ -41,6 +41,7 @@ export default function (store: Store) {
     }
   }
 
+  let restartTimer: NodeJS.Timeout | undefined
   let scan: NodeJS.Timeout | null
   let workerController: BalancesWorkerController | null
   let onResume: (() => void) | null
@@ -49,7 +50,10 @@ export default function (store: Store) {
     log.warn(`balances controller stopped, restarting in ${RESTART_WAIT} seconds`)
     stop()
 
-    setTimeout(restart, RESTART_WAIT * 1000)
+    restartTimer = setTimeout(() => {
+      restartTimer = undefined
+      restart()
+    }, RESTART_WAIT * 1000)
   }
 
   function handleClose() {
@@ -122,6 +126,8 @@ export default function (store: Store) {
 
   function stop() {
     log.verbose('stopping balances updates')
+    clearTimeout(restartTimer)
+    restartTimer = undefined
 
     stopScan()
 
@@ -181,21 +187,7 @@ export default function (store: Store) {
   }
 
   function updateBalances(address: Address, chains: number[]) {
-    const customTokens = storeApi.getCustomTokens()
-    const knownTokens = storeApi
-      .getKnownTokens(address)
-      .filter(
-        (token) => !customTokens.some((t) => t.address === token.address && t.chainId === token.chainId)
-      )
-
-    const trackedTokens = [...customTokens, ...knownTokens].filter((t) => chains.includes(t.chainId))
-
-    if (trackedTokens.length > 0) {
-      workerController?.updateKnownTokenBalances(address, trackedTokens)
-    }
-
-    workerController?.updateChainBalances(address, chains)
-    workerController?.scanForTokenBalances(address, trackedTokens, chains)
+    refreshAccount(address, chains).catch((error) => log.warn('Balance refresh failed', error))
   }
 
   function handleUpdate(address: Address, updateFn: (address: Address) => void) {
@@ -324,8 +316,27 @@ export default function (store: Store) {
     }
 
     log.verbose('adding balances updates', { address, tokens: tokens.map((t) => t.address) })
-    runWhenReady(() => workerController?.updateKnownTokenBalances(address, tokens))
+    runWhenReady(() => updateBalances(address, [...new Set(tokens.map((token) => token.chainId))]))
   }
 
-  return { start, stop, resume, pause, setAddress, addNetworks, addTokens }
+  const refreshAccount = (address: Address, chains: number[]) => {
+    if (!workerController) return Promise.reject(new Error('Balances worker is not ready'))
+    const tokens = [...storeApi.getCustomTokens(), ...storeApi.getKnownTokens(address)].filter((token) =>
+      chains.includes(token.chainId)
+    )
+    const tracked = [...new Map(tokens.map((token) => [toTokenId(token), token])).values()]
+    return workerController.scanAccount(address, tracked, chains)
+  }
+
+  return {
+    start,
+    stop,
+    resume,
+    pause,
+    setAddress,
+    addNetworks,
+    addTokens,
+    refreshAccount,
+    isReady: () => !!workerController?.isRunning()
+  }
 }

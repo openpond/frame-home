@@ -10,8 +10,6 @@ import { updateOrigin, isTrusted, parseOrigin } from './origins'
 import validPayload from './validPayload'
 import protectedMethods from './protectedMethods'
 
-import type { Permission } from '../store/state'
-
 const logTraffic = process.env.LOG_TRAFFIC
 
 interface PendingRequest {
@@ -28,11 +26,12 @@ interface HTTPPollingPayload extends JSONRPCRequestPayload {
   pollId?: string
 }
 
-const polls: Record<string, string[]> = {}
-const pollSubs: Record<string, Subscription> = {}
-const pending: Record<string, PendingRequest> = {}
-const cleanupTimers: Record<string, NodeJS.Timeout> = {}
-const connectionMonitors: Record<string, NodeJS.Timeout> = {}
+const polls: Record<string, string[]> = Object.create(null)
+const owners: Record<string, string> = Object.create(null)
+const pollSubs: Record<string, Subscription> = Object.create(null)
+const pending: Record<string, PendingRequest> = Object.create(null)
+const cleanupTimers: Record<string, NodeJS.Timeout> = Object.create(null)
+const connectionMonitors: Record<string, NodeJS.Timeout> = Object.create(null)
 
 function extendSession(originId: string) {
   if (originId) {
@@ -45,17 +44,33 @@ function extendSession(originId: string) {
 }
 
 const cleanup = (id: string) => {
+  clearTimeout(cleanupTimers[id])
+  delete cleanupTimers[id]
+  if (pending[id]) {
+    clearTimeout(pending[id].timer)
+    pending[id].send()
+  }
+  clearTimeout(cleanupTimers[id])
+  delete cleanupTimers[id]
+  delete owners[id]
   delete polls[id]
   delete pending[id]
   Object.keys(pollSubs).forEach((sub) => {
     if (pollSubs[sub].id === id) {
-      provider.send({ jsonrpc: '2.0', id: 1, method: 'eth_unsubscribe', params: [sub], _origin: '' })
+      provider.send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_unsubscribe',
+        params: [sub],
+        _origin: pollSubs[sub].origin
+      })
       delete pollSubs[sub]
     }
   })
 }
 
 const handler = (req: IncomingMessage, res: ServerResponse) => {
+  res.setTimeout?.(120_000, () => res.destroy())
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader(
@@ -66,14 +81,30 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200)
     res.end()
   } else if (req.method === 'POST') {
-    const body: any = []
+    const body: Buffer[] = []
+    let bytes = 0
+    let oversized = false
     req
-      .on('data', (chunk) => body.push(chunk))
+      .on('data', (chunk) => {
+        bytes += chunk.length
+        if (bytes > 1024 * 1024) {
+          if (!oversized) {
+            res.writeHead(413)
+            res.end()
+          }
+          oversized = true
+          body.length = 0
+        } else if (!oversized) body.push(chunk)
+      })
       .on('end', async () => {
+        if (oversized) return
         res.on('error', (err) => console.error('res err', err))
         const data = Buffer.concat(body).toString()
         const rawPayload = validPayload<HTTPPollingPayload>(data)
-        if (!rawPayload) return console.warn('Invalid Payload', data)
+        if (!rawPayload) {
+          res.writeHead(400)
+          return res.end(JSON.stringify({ error: { code: -32600, message: 'Invalid request' } }))
+        }
 
         if (logTraffic)
           log.info(
@@ -86,6 +117,28 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         const { payload, chainId } = updateOrigin(rawPayload, origin)
 
         extendSession(payload._origin)
+
+        const pollId = payload.method === 'eth_pollSubscriptions' ? payload.params[0] : rawPayload.pollId
+        const reject = (message: string) => {
+          res.writeHead(401)
+          res.end(JSON.stringify({ id: payload.id, jsonrpc: '2.0', error: { code: 4001, message } }))
+        }
+        if (payload.method === 'eth_subscribe' || payload.method === 'eth_pollSubscriptions') {
+          if (typeof pollId !== 'string' || !pollId || (owners[pollId] && owners[pollId] !== payload._origin))
+            return reject('Invalid polling session')
+          if (payload.method === 'eth_pollSubscriptions' && (!owners[pollId] || pending[pollId]))
+            return reject('Invalid polling session')
+          if (!owners[pollId] && Object.keys(owners).length >= 1024)
+            return reject('Too many polling sessions')
+          owners[pollId] = payload._origin
+          clearTimeout(cleanupTimers[pollId])
+          cleanupTimers[pollId] = setTimeout(() => cleanup(pollId), 30_000)
+        }
+        if (
+          payload.method === 'eth_unsubscribe' &&
+          payload.params.some((sub: string) => pollSubs[sub]?.origin !== payload._origin)
+        )
+          return reject('Subscription belongs to another session')
 
         if (!isHexString(chainId)) {
           const error = {
@@ -138,10 +191,26 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
             }
             if (typeof id === 'string') return send(false)
             res.writeHead(401, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Invalid Client ID' }))
+            return res.end(JSON.stringify({ error: 'Invalid Client ID' }))
           }
 
           provider.send(payload, (response) => {
+            if (
+              res.destroyed ||
+              res.writableEnded ||
+              (payload.method === 'eth_subscribe' && owners[rawPayload.pollId || ''] !== payload._origin)
+            ) {
+              if (payload.method === 'eth_subscribe' && response?.result) {
+                provider.send({
+                  jsonrpc: '2.0',
+                  id: 1,
+                  method: 'eth_unsubscribe',
+                  params: [response.result],
+                  _origin: payload._origin
+                })
+              }
+              return
+            }
             if (response && response.result) {
               if (payload.method === 'eth_subscribe') {
                 pollSubs[response.result] = { id: rawPayload.pollId || '', origin: payload._origin } // Refactor this so you don't need to send a pollId and use the existing subscription id
@@ -175,6 +244,10 @@ provider.on('data:subscription', (payload: RPC.Susbcription.Response) => {
 
     polls[id] = polls[id] || []
 
+    if (polls[id].length >= 256) {
+      cleanup(id)
+      return
+    }
     polls[id].push(JSON.stringify(payload))
     pending[id]?.send()
   }

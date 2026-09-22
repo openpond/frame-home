@@ -37,6 +37,13 @@ export default class BalancesWorkerController extends EventEmitter {
 
   private bootstrapTimeout?: NodeJS.Timeout
   private heartbeat?: NodeJS.Timeout
+  private nextScanId = 0
+  private stopped = false
+  private activeAccounts = new Map<string, Promise<boolean>>()
+  private scans = new Map<
+    number,
+    { resolve: (complete: boolean) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }
+  >()
 
   constructor() {
     super()
@@ -55,6 +62,7 @@ export default class BalancesWorkerController extends EventEmitter {
     }, BOOTSTRAP_TIMEOUT_SECONDS * 1000)
 
     this.worker.on('message', (message: WorkerMessage) => {
+      if (this.stopped) return
       log.debug(`balances controller received message: ${JSON.stringify(message)}`)
 
       if (message.type === 'ready') {
@@ -65,6 +73,16 @@ export default class BalancesWorkerController extends EventEmitter {
         this.heartbeat = setInterval(() => this.sendHeartbeat(), 1000 * 20)
 
         this.emit('ready')
+      }
+
+      if (message.type === 'accountScanComplete') {
+        const { scanId, complete } = message as WorkerMessage & { scanId: number; complete: boolean }
+        const pending = this.scans.get(scanId)
+        if (pending) {
+          clearTimeout(pending.timer)
+          this.scans.delete(scanId)
+          pending.resolve(complete)
+        }
       }
 
       if (message.type === 'chainBalances') {
@@ -87,6 +105,7 @@ export default class BalancesWorkerController extends EventEmitter {
     this.worker.on('close', (code, signal) => {
       // emitted after exit or error and when all stdio streams are closed
       log.warn(`balances worker exited with code ${code}, signal: ${signal}, pid: ${this.worker.pid}`)
+      this.stopWorker()
       this.worker.removeAllListeners()
 
       this.emit('close')
@@ -114,20 +133,38 @@ export default class BalancesWorkerController extends EventEmitter {
     return !!this.heartbeat
   }
 
-  updateChainBalances(address: Address, chains: number[]) {
-    this.sendCommandToWorker('updateChainBalance', [address, chains])
-  }
-
-  updateKnownTokenBalances(address: Address, tokens: Token[]) {
-    this.sendCommandToWorker('fetchTokenBalances', [address, tokens])
-  }
-
-  scanForTokenBalances(address: Address, tokens: Token[], chains: number[]) {
-    this.sendCommandToWorker('tokenBalanceScan', [address, tokens, chains])
+  scanAccount(address: Address, tokens: Token[], chains: number[]): Promise<boolean> {
+    if (!this.isRunning()) return Promise.reject(new Error('Balances worker is not ready'))
+    const key = `${address}:${chains
+      .slice()
+      .sort((a, b) => a - b)
+      .join(',')}`
+    const active = this.activeAccounts.get(key)
+    if (active) return active
+    if (this.scans.size >= 2) return Promise.resolve(false)
+    const scanId = ++this.nextScanId
+    const result = new Promise<boolean>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.scans.delete(scanId)
+        reject(new Error('Account balance scan timed out'))
+        this.stopWorker()
+      }, 60_000)
+      this.scans.set(scanId, { resolve, reject, timer })
+      this.sendCommandToWorker('scanAccount', [scanId, address, tokens, chains])
+    }).finally(() => this.activeAccounts.delete(key))
+    this.activeAccounts.set(key, result)
+    return result
   }
 
   // private
   private stopWorker() {
+    if (this.stopped) return
+    this.stopped = true
+    for (const pending of this.scans.values()) {
+      clearTimeout(pending.timer)
+      pending.reject(new Error('Balances worker stopped'))
+    }
+    this.scans.clear()
     if (this.heartbeat) {
       clearInterval(this.heartbeat)
       this.heartbeat = undefined

@@ -1850,6 +1850,7 @@ describe('state change events', () => {
 
     const tokenPriceData = { usd: { price: 225.35 } }
     const tokenBalance = {
+      chainId: 1,
       symbol: 'OHM',
       balance: '0x606401fc9',
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
@@ -1858,7 +1859,7 @@ describe('state change events', () => {
     store.set('main.accounts', address, 'balances.lastUpdated', new Date())
     store.set('main.permissions', address, { 'test.frame': { origin: 'test.frame', provider: true } })
     store.set('main.networksMeta.ethereum.1.nativeCurrency', ethPriceData)
-    store.set('main.rates', tokenBalance.address, tokenPriceData)
+    store.set('main.rates', `${tokenBalance.chainId}:${tokenBalance.address}`, tokenPriceData)
     store.set('main.balances', address, [ethBalance, tokenBalance])
     store.set('selected.current', address)
 

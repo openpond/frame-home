@@ -67,7 +67,8 @@ export default function (eth: EthereumProvider) {
       return { ...createBalance(rawBalance, 18), chainId }
     } catch (e) {
       log.error(`error loading native currency balance for chain id: ${chainId}`, e)
-      return { balance: '0x0', displayValue: '0.0', chainId }
+      // A failed RPC is unknown, not a zero balance. Preserve the cached value.
+      return undefined
     }
   }
 
@@ -126,7 +127,8 @@ export default function (eth: EthereumProvider) {
     getCurrencyBalances: async function (address: string, chains: number[]) {
       const fetchChainBalance = getNativeCurrencyBalance.bind(null, address)
 
-      return Promise.all(chains.map(fetchChainBalance))
+      const results = await Promise.all(chains.map(fetchChainBalance))
+      return results.filter((balance) => balance !== undefined)
     },
     getTokenBalances: async function (owner: string, tokens: TokenDefinition[]) {
       const tokensByChain = tokens.reduce(groupByChain, {} as TokensByChain)

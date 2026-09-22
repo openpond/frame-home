@@ -49,7 +49,7 @@ class Command extends React.Component {
         <div
           className='commandItem commandItemClose'
           onClick={() => {
-            link.send('tray:action', 'closeDash')
+            link.send('wallet:close')
           }}
         >
           {svg.x(16)}
