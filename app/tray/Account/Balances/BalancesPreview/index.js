@@ -63,7 +63,9 @@ class BalancesPreview extends React.Component {
           const isNative = isNativeCurrency(rawBalance.address)
           const nativeCurrencyInfo = networksMeta[rawBalance.chainId].nativeCurrency || {}
 
-          const rate = isNative ? nativeCurrencyInfo : rates[rawBalance.address || rawBalance.symbol] || {}
+          const rate = isNative
+            ? nativeCurrencyInfo
+            : rates[`${rawBalance.chainId}:${rawBalance.address?.toLowerCase()}`] || {}
           const logoURI = (isNative && nativeCurrencyInfo.icon) || rawBalance.logoURI
           const name = isNative
             ? nativeCurrencyInfo.name || networks[rawBalance.chainId].name

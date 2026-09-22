@@ -23,7 +23,7 @@ const state = (holdings) => ({
     }
   },
   networksMeta: { ethereum: { 1: { nativeCurrency: { usd: { price: 2000 } } } } },
-  rates: { [token]: { usd: { price: 1 } } }
+  rates: { [`1:${token}`]: { usd: { price: 1 } }, [`10:${token}`]: { usd: { price: 1 } } }
 })
 
 test('keeps chain identity, deduplicates each wallet holding, and preserves raw precision', () => {
@@ -40,11 +40,11 @@ test('keeps chain identity, deduplicates each wallet holding, and preserves raw 
 
 test('missing and placeholder prices stay unknown; native uses its chain price', () => {
   const main = state([holding(), holding({ address: native, decimals: 18, balance: '1000000000000000000' })])
-  delete main.rates[token]
+  delete main.rates[`1:${token}`]
   const data = portfolio(main)
   expect(data.unpriced).toBe(1)
   expect(data.total.toFixed()).toBe('2000')
-  main.rates[token] = { usd: { price: 0 } }
+  main.rates[`1:${token}`] = { usd: { price: 0 } }
   expect(portfolio(main).unpriced).toBe(1)
 })
 

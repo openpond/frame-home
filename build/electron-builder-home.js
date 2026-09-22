@@ -5,5 +5,7 @@ module.exports = {
   appId: 'local.frame.home',
   productName: 'Frame Home',
   directories: { output: 'dist/home' },
+  artifactName: 'Frame-Home-${version}-${os}-${arch}.${ext}',
+  publish: null,
   linux: { executableName: 'frame-home', category: 'Finance' }
 }

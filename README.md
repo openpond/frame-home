@@ -1,6 +1,6 @@
 # Frame Home
 
-This is [Frame Home](https://github.com/glucrypto/frame-home), a fork of [floating/frame](https://github.com/floating/frame) with a persistent desktop holdings window and account views. See [FRAME_HOME.md](./FRAME_HOME.md) for setup, packaging, behavior, and validation notes. The upstream Frame documentation follows below.
+This is [Frame Home](https://github.com/glucrypto/frame-home), a fork of [floating/frame](https://github.com/floating/frame) with a persistent desktop holdings window and account views. See [FRAME_HOME.md](./FRAME_HOME.md) for setup, packaging, behavior, and validation notes. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the PR, CI, and explicit release-tag workflow. The upstream Frame documentation follows below.
 
 <h2 align="center">
   <br>

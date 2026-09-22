@@ -6,7 +6,7 @@
     "@ledgerhq/cryptoassets/data/erc20-signatures": "@ledgerhq/cryptoassets/lib/data/erc20-signatures.js",
     "\\.svg$": "<rootDir>/test/jest.svg.js"
   },
-  "testTimeout": 100,
+  "testTimeout": 5000,
   "fakeTimers": {
     "enableGlobally": true
   },

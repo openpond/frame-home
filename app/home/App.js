@@ -17,6 +17,7 @@ const navigation = [
 ]
 
 export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
+  const { accounts, balances, networks, networksMeta, rates } = main
   const view = nav[0]?.view || 'holdings'
   const section = [...nav].reverse().find((item) => navigation.some(([id]) => id === item.view))?.view || view
   const [search, setSearch] = useState('')
@@ -25,8 +26,14 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
   const [testnets, setTestnets] = useState(false)
   const [error, setError] = useState('')
   const data = useMemo(
-    () => portfolio(main, { search, chain, wallet, testnets }),
-    [main, search, chain, wallet, testnets]
+    () =>
+      portfolio(view === 'holdings' ? { accounts, balances, networks, networksMeta, rates } : {}, {
+        search,
+        chain,
+        wallet,
+        testnets
+      }),
+    [accounts, balances, networks, networksMeta, rates, view, search, chain, wallet, testnets]
   )
   const scans = data.accounts.map((account) => scan?.accounts?.[account.id])
   const checked = scans.filter((entry) => entry && entry.state !== 'scanning').length
@@ -204,7 +211,17 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
 class HomeStore extends React.Component {
   render() {
     return (
-      <Home main={this.store('main')} nav={this.store('windows.dash.nav')} scan={this.store('home.scan')} />
+      <Home
+        main={{
+          accounts: this.store('main.accounts'),
+          balances: this.store('main.balances'),
+          networks: this.store('main.networks'),
+          networksMeta: this.store('main.networksMeta'),
+          rates: this.store('main.rates')
+        }}
+        nav={this.store('windows.dash.nav')}
+        scan={this.store('home.scan')}
+      />
     )
   }
 }

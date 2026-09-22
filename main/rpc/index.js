@@ -2,6 +2,7 @@ const fs = require('fs')
 const { ipcMain } = require('electron')
 const log = require('electron-log')
 const { randomBytes } = require('crypto')
+import { isWalletSender } from '../windows/window'
 import { isAddress } from '@ethersproject/address'
 import { openFileDialog } from '../windows/dialog'
 import { openBlockExplorer } from '../windows/window'
@@ -314,10 +315,15 @@ const unwrap = (v) => (v !== undefined || v !== null ? JSON.parse(v) : v)
 const wrap = (v) => (v !== undefined || v !== null ? JSON.stringify(v) : v)
 
 ipcMain.on('main:rpc', (event, id, method, ...args) => {
-  id = unwrap(id)
-  method = unwrap(method)
-  args = args.map((arg) => unwrap(arg))
-  if (rpc[method]) {
+  if (!isWalletSender(event)) return
+  try {
+    id = unwrap(id)
+    method = unwrap(method)
+    args = args.map((arg) => unwrap(arg))
+  } catch {
+    return
+  }
+  if (typeof method === 'string' && Object.prototype.hasOwnProperty.call(rpc, method)) {
     if (method === 'getFrameId') {
       rpc[method](event.sender.getOwnerBrowserWindow(), ...args, (...args) => {
         event.sender.send(

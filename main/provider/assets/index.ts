@@ -20,8 +20,8 @@ const storeApi = {
 
     return currency || { usd: { price: 0 } }
   },
-  getUsdRate: (address: Address): UsdRate => {
-    const rate = store('main.rates', address.toLowerCase())
+  getUsdRate: (address: Address, chainId: number): UsdRate => {
+    const rate = store('main.rates', `${chainId}:${address.toLowerCase()}`)
 
     return rate || { usd: { price: 0 } }
   },
@@ -78,7 +78,7 @@ function fetchAssets(accountId: string) {
         currencyInfo: currency
       })
     } else {
-      const usdRate = storeApi.getUsdRate(balance.address)
+      const usdRate = storeApi.getUsdRate(balance.address, balance.chainId)
 
       assets.erc20.push({
         ...balance,

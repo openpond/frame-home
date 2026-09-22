@@ -1,91 +1,70 @@
-name: Build and publish installer artifacts for all platforms
+name: Draft Frame Home release
 
 on:
   push:
-    branches:
-      - 'develop'
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag on develop (for example v0.6.12-home.1)
+        required: true
+        type: string
 
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  create_draft_release:
-    runs-on: ubuntu-latest
-
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-22.04
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
-      - name: read version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@master
-      - name: check for existing release
-        run: gh release list --exclude-drafts | grep -q ".*v${{ steps.package-version.outputs.current-version }}" && exit 1 || true
-      - name: remove old draft releases
-        run: gh release list | grep -e "Draft.*v${{ steps.package-version.outputs.current-version }}" | awk '{print $3}' | xargs -r gh release delete
-      - name: create new draft release
-        uses: marvinpinto/action-automatic-releases@latest
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: v${{ steps.package-version.outputs.current-version }}
-          prerelease: false
-          draft: true
-          title: ${{ steps.package-version.outputs.current-version }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - id: tag
+        name: Require a versioned commit already merged into develop
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: node scripts/validate-release.mjs
 
-  build_release:
-    needs: [create_draft_release]
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-20.04
-          - ubuntu-22.04-arm
-        include:
-          - os: macos-13
-            cert_key: APPLE_DEVELOPER_SIGNING_CERTIFICATE
-            cert_password_key: APPLE_CERTIFICATE_PASSWORD
-            apple_id_key: APPLE_ID
-            apple_app_specific_password_key: APPLE_ID_PASSWORD
-            apple_team_id_key: APPLE_TEAM_ID
-          - os: windows-latest
-            cert_key: WINDOWS_CSC_CERTIFICATE
-            cert_password_key: WINDOWS_CSC_PASSWORD
+  verify:
+    needs: validate
+    uses: ./.github/workflows/compile-and-test.yml
+    with:
+      ref: ${{ needs.validate.outputs.sha }}
 
-    runs-on: ${{ matrix.os }}
-
-    env:
-      CSC_LINK: ${{ secrets[matrix.cert_key] }}
-      CSC_KEY_PASSWORD: ${{ secrets[matrix.cert_password_key] }}
-      APPLE_ID: ${{ secrets[matrix.apple_id_key] }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets[matrix.apple_app_specific_password_key] }}
-      APPLE_TEAM_ID: ${{ secrets[matrix.apple_team_id_key] }}
-
+  draft:
+    name: Create draft with verified archive
+    needs: [validate, verify]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          node-version: 18.12.1
-          cache: 'npm'
-      - name: install Linux dev tools
-        if: startsWith(matrix.os, 'ubuntu')
+          name: frame-home-linux-x64
+          path: artifacts
+      - name: Verify and attach artifacts
+        working-directory: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
         run: |
-          sudo apt update -y
-          sudo apt install -y libudev-dev
-      - name: install Macos dev tools
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          sudo -H pip install setuptools
-      - name: create NPM config file
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ./.npmrc
-      - run: npm run setup:ci
-      - run: npm run compile
-      - run: npm run test:unit:main -- --testTimeout=5000 --verbose --detectOpenHandles --forceExit
-      - run: npm run test:unit:components
-      - run: npm run bundle
-      - name: Sleep for 4 seconds
-        shell: bash
-        run: sleep 4
-      - name: Publish
-        if: ${{ startsWith(matrix.os, 'ubuntu') && endsWith(matrix.os, 'arm') }}
-        run: npm run publish:linux:arm64
-      - name: Publish
-        if: ${{ !startsWith(matrix.os, 'ubuntu') || !endsWith(matrix.os, 'arm') }}
-        run: npm run publish
+          sha256sum --check SHA256SUMS
+          printf 'Frame Home Linux x64 archive built from commit %s.\n\nReview and smoke-test this draft before publishing. macOS and Windows installers are not included.\n' "$RELEASE_SHA" > release-notes.md
+          release_flags=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then release_flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" ./*.tar.gz SHA256SUMS --draft --verify-tag --title "Frame Home $RELEASE_TAG" --notes-file release-notes.md "${release_flags[@]}"

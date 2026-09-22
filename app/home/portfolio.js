@@ -106,7 +106,7 @@ export function portfolio(main, { search = '', chain = '', wallet = '', testnets
       const quote =
         token.address === NATIVE_CURRENCY
           ? metadata[token.chainId]?.nativeCurrency?.usd?.price
-          : main.rates?.[token.address?.toLowerCase()]?.usd?.price
+          : main.rates?.[`${token.chainId}:${token.address?.toLowerCase()}`]?.usd?.price
       const price = new BigNumber(quote)
       // Frame uses zero as a placeholder before prices load. Keep it unknown.
       // Testnet holdings must not inflate a real-money total.

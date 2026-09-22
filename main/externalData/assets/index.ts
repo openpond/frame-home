@@ -15,6 +15,7 @@ interface RateUpdate {
 }
 
 export default function rates(pylon: Pylon, store: Store) {
+  let subscriptionKey = ''
   const storeApi = {
     getKnownTokens: (address?: Address) =>
       ((address && store('main.tokens.known', address)) || []) as Token[],
@@ -51,7 +52,7 @@ export default function rates(pylon: Pylon, store: Store) {
         // address is always defined for tokens
         const address = update.id.address as string
 
-        allRates[address] = {
+        allRates[`${update.id.chainId}:${address.toLowerCase()}`] = {
           usd: {
             price: update.data.usd,
             change24hr: update.data.usd_24h_change
@@ -103,10 +104,16 @@ export default function rates(pylon: Pylon, store: Store) {
 
     pylon.off('rates', handleRatesUpdates)
 
+    subscriptionKey = ''
     pylon.rates([])
   }
 
   function setAssets(assetIds: AssetId[]) {
+    const key = JSON.stringify(
+      assetIds.map((asset) => `${asset.type}:${asset.chainId}:${asset.address || ''}`).sort()
+    )
+    if (key === subscriptionKey) return
+    subscriptionKey = key
     log.verbose(
       'subscribing to rates updates for native currencies on chains:',
       assetIds.filter((a) => a.type === AssetType.NativeCurrency).map((a) => a.chainId)

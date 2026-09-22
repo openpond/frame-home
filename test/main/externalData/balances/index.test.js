@@ -40,19 +40,19 @@ it('scans for balances when setting an address if the controller is ready', () =
 
   jest.advanceTimersByTime(0)
 
-  expect(balancesController.updateKnownTokenBalances).toHaveBeenCalled()
+  expect(balancesController.scanAccount).toHaveBeenCalled()
 })
 
 it('scans for balances as soon as the controller is ready', () => {
   balancesController.isRunning.mockReturnValue(false)
   balances.setAddress(address)
 
-  expect(balancesController.updateKnownTokenBalances).not.toHaveBeenCalled()
+  expect(balancesController.scanAccount).not.toHaveBeenCalled()
 
   balancesController.emit('ready')
   jest.advanceTimersByTime(0)
 
-  expect(balancesController.updateKnownTokenBalances).toHaveBeenCalled()
+  expect(balancesController.scanAccount).toHaveBeenCalled()
 })
 
 it('scans for balances every 10 minutes when paused', () => {
@@ -63,5 +63,5 @@ it('scans for balances every 10 minutes when paused', () => {
 
   jest.advanceTimersByTime(10 * 60 * 1000)
 
-  expect(balancesController.updateKnownTokenBalances).toHaveBeenCalledTimes(1)
+  expect(balancesController.scanAccount).toHaveBeenCalledTimes(1)
 })

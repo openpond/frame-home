@@ -33,11 +33,12 @@ describe('#loadAssets', () => {
     const priceData = { usd: { price: 225.35 } }
     const balance = {
       symbol: 'OHM',
+      chainId: 1,
       balance: '0x606401fc9',
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
     }
 
-    store.set('main.rates', balance.address, priceData)
+    store.set('main.rates', `1:${balance.address}`, priceData)
     store.set('main.balances', account, [balance])
 
     expect(loadAssets(account)).toEqual({
@@ -98,11 +99,12 @@ describe('#createObserver', () => {
     const priceData = { usd: { price: 225.35 } }
     const balance = {
       symbol: 'OHM',
+      chainId: 1,
       balance: '0x606401fc9',
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
     }
 
-    store.set('main.rates', balance.address, priceData)
+    store.set('main.rates', `1:${balance.address}`, priceData)
     store.set('main.balances', account, [balance])
 
     fireObserver()

@@ -16,6 +16,14 @@ export default function portfolioScanner(source: PortfolioSource) {
   const attempts = new Map<Address, { at: number; chains: string }>()
   const running = new Set<Address>()
   let closed = false
+  let lastReport = ''
+  function report(chains: number[]) {
+    const signature = JSON.stringify([states, chains])
+    if (signature !== lastReport) {
+      lastReport = signature
+      source.report({ ...states }, chains)
+    }
+  }
 
   function tick() {
     if (closed || !source.visible() || !source.ready()) return
@@ -32,10 +40,12 @@ export default function portfolioScanner(source: PortfolioSource) {
       }
     }
     if (!chains.length) {
-      source.report({ ...states }, chains)
+      report(chains)
       return
     }
-    for (const address of addresses) {
+    for (const address of addresses.sort(
+      (a, b) => (attempts.get(a)?.at ?? -Infinity) - (attempts.get(b)?.at ?? -Infinity)
+    )) {
       if (running.size >= 2) break
       const previous = attempts.get(address)
       if (running.has(address) || (previous?.chains === chainKey && Date.now() - previous.at < 120_000))
@@ -43,13 +53,20 @@ export default function portfolioScanner(source: PortfolioSource) {
       running.add(address)
       attempts.set(address, { at: Date.now(), chains: chainKey })
       states[address] = { state: 'scanning', checkedAt: states[address]?.checkedAt }
-      source.report({ ...states }, chains)
+      report(chains)
       const finish = (state: ScanState['state']) => {
         running.delete(address)
         if (closed) return
-        if (source.addresses().includes(address)) {
+        if (
+          source.addresses().includes(address) &&
+          source
+            .chains()
+            .slice()
+            .sort((a, b) => a - b)
+            .join(',') === chainKey
+        ) {
           states[address] = { state, checkedAt: Date.now() }
-          source.report({ ...states }, chains)
+          report(chains)
         }
       }
       source.scan(address, chains).then(

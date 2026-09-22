@@ -17,8 +17,6 @@ const extensionPrefixes = {
   safari: 'safari-web-extension'
 }
 
-const protocolRegex = /^(?:ws|http)s?:\/\//
-
 interface OriginUpdateResult {
   payload: RPCRequestPayload
   chainId: string
@@ -48,7 +46,7 @@ const storeApi = {
 export function parseOrigin(origin?: string) {
   if (!origin) return 'Unknown'
 
-  return origin.replace(protocolRegex, '')
+  return origin
 }
 
 function invalidOrigin(origin: string) {

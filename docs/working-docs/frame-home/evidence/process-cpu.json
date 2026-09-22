@@ -1,0 +1,105 @@
+{
+  "measuredAt": "2026-09-21T03:49:25.399383+00:00",
+  "note": "Read-only counters from the already-running app; uncontrolled workload. 100% is one logical CPU. No UI visibility, RPC volume or function-level trace is inferred.",
+  "samples": [
+    {
+      "seconds": 10.01,
+      "groups": {
+        "main": {
+          "processes": 1,
+          "cpuPercentOneCore": 6.09
+        },
+        "zygote": {
+          "processes": 3,
+          "cpuPercentOneCore": 0.0
+        },
+        "balances-worker": {
+          "processes": 1,
+          "cpuPercentOneCore": 23.38
+        },
+        "gpu-process": {
+          "processes": 1,
+          "cpuPercentOneCore": 1.4
+        },
+        "utility": {
+          "processes": 1,
+          "cpuPercentOneCore": 0.0
+        },
+        "renderer": {
+          "processes": 3,
+          "cpuPercentOneCore": 3.7
+        },
+        "signer-worker": {
+          "processes": 28,
+          "cpuPercentOneCore": 0.0
+        }
+      }
+    },
+    {
+      "seconds": 10.01,
+      "groups": {
+        "main": {
+          "processes": 1,
+          "cpuPercentOneCore": 11.39
+        },
+        "zygote": {
+          "processes": 3,
+          "cpuPercentOneCore": 0.0
+        },
+        "balances-worker": {
+          "processes": 1,
+          "cpuPercentOneCore": 68.93
+        },
+        "gpu-process": {
+          "processes": 1,
+          "cpuPercentOneCore": 1.5
+        },
+        "utility": {
+          "processes": 1,
+          "cpuPercentOneCore": 0.1
+        },
+        "renderer": {
+          "processes": 3,
+          "cpuPercentOneCore": 4.8
+        },
+        "signer-worker": {
+          "processes": 28,
+          "cpuPercentOneCore": 0.0
+        }
+      }
+    },
+    {
+      "seconds": 10.01,
+      "groups": {
+        "main": {
+          "processes": 1,
+          "cpuPercentOneCore": 15.19
+        },
+        "zygote": {
+          "processes": 3,
+          "cpuPercentOneCore": 0.0
+        },
+        "balances-worker": {
+          "processes": 1,
+          "cpuPercentOneCore": 92.11
+        },
+        "gpu-process": {
+          "processes": 1,
+          "cpuPercentOneCore": 1.3
+        },
+        "utility": {
+          "processes": 1,
+          "cpuPercentOneCore": 0.0
+        },
+        "renderer": {
+          "processes": 3,
+          "cpuPercentOneCore": 5.29
+        },
+        "signer-worker": {
+          "processes": 28,
+          "cpuPercentOneCore": 0.0
+        }
+      }
+    }
+  ]
+}
