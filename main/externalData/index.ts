@@ -43,7 +43,7 @@ export default function () {
   const portfolio = portfolioScanner({
     addresses: () => Object.keys(store('main.accounts') || {}),
     chains: () => storeApi.getConnectedNetworks().map((network) => network.id),
-    visible: () => !!store('home.visible'),
+    visible: () => !!store('home.visible') || (store('home.readUntil') || 0) > Date.now(),
     ready: balances.isReady,
     scan: balances.refreshAccount,
     report: (accounts, chains) => store.setHomeScanStatus({ accounts, chains })

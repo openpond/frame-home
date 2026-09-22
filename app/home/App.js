@@ -7,6 +7,7 @@ import Dropdown from '../../resources/Components/Dropdown'
 import Dash from '../dash/App'
 import { portfolio, money } from './portfolio'
 import HoldingRow from './HoldingRow'
+import walletLogo from '../../resources/branding/openpond-wallet.png'
 
 const navigation = [
   ['accounts', 'Accounts', 'accounts'],
@@ -57,9 +58,9 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
 
   return (
     <div className='homeLayout'>
-      <aside className='homeNavigation' aria-label='Frame navigation'>
-        <div className='homeLogo' aria-label='Frame'>
-          {svg.logo(40)}
+      <aside className='homeNavigation' aria-label='OpenPond Local Wallet navigation'>
+        <div className='homeLogo' aria-label='OpenPond Local Wallet'>
+          <img src={walletLogo} width='40' height='40' alt='' />
         </div>
         <nav className='dashModules'>
           <button
@@ -185,7 +186,7 @@ export function Home({ main, nav = [{ view: 'holdings', data: {} }], scan }) {
                       <div className='homeEmpty'>
                         {data.accounts.length
                           ? 'No holdings to show for these filters. Balances refresh in the background.'
-                          : 'Add an account in Frame to see its holdings here.'}
+                          : 'Add an account to see its holdings here.'}
                       </div>
                     ) : null}
                   </div>

@@ -8,7 +8,7 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 
 import Confirm from '../../../resources/Components/Confirm'
 import AddToken from './AddToken'
-import frameIcon from '../../../asset/FrameIcon.png'
+import frameIcon from '../../../resources/branding/openpond-wallet.png'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)

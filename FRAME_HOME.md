@@ -1,6 +1,6 @@
-# Frame Home
+# OpenPond Local Wallet
 
-A desktop fork of [floating/frame](https://github.com/floating/frame), published at [glucrypto/frame-home](https://github.com/glucrypto/frame-home), with a persistent holdings window. Based on upstream commit `dac4378979fe1f490f4d0bf141dc19c201d2cb58` (package version 0.6.11).
+A desktop fork of [floating/frame](https://github.com/floating/frame), published at [openpond/frame-home](https://github.com/openpond/frame-home), with a persistent holdings window. Based on upstream commit `dac4378979fe1f490f4d0bf141dc19c201d2cb58` (package version 0.6.11).
 
 Home uses Frame’s shared palette, fonts, navigation, dropdown, token icons, and balance formatting. The total is at the top; the network selector and **Open Extension** button are at the upper right. The rest of the page is a holdings list. Sidebar navigation renders Frame’s original Accounts, Chains, Tokens, Dapps, and Settings components inside Home, including nested editors and Back navigation. Only **Open Extension** or an explicit account selection opens the wallet panel. Home navigation and filters do not change the selected account.
 
@@ -16,14 +16,14 @@ The current upstream presets use Pylon for Ethereum, Optimism, Polygon, Arbitrum
 
 ## Run
 
-The Linux x64 build is `dist/home/linux-unpacked/frame-home`. Keep its neighboring files with it. Quit stock Frame before running the fork: both use port 1248 for the wallet provider and port 8421 for the dapp server.
+The Linux x64 build is `dist/home/linux-unpacked/openpond-local-wallet`. Keep its neighboring files with it. Quit stock Frame before running the fork: both use port 1248 for the wallet provider and port 8421 for the dapp server.
 
-The packaged application has a separate display and packaging identity (`Frame Home`, `local.frame.home`), but retains the package name `frame` and uses the existing Frame profile by default (on Linux, `~/.config/frame`). It has not been installed into system menus. Home opens at launch; the wallet panel opens through **Open Extension**, sidebar navigation, or Frame’s existing summon and request flows. The X in either the wallet panel or its expanded view dismisses both wallet views while Home stays open.
+The packaged application has a separate display and packaging identity (`OpenPond Local Wallet`, `com.openpond.local-wallet`), but retains the package name `frame` and uses the existing Frame profile by default (on Linux, `~/.config/frame`). It has not been installed into system menus. Home opens at launch; the wallet panel opens through **Open Extension**, sidebar navigation, or Frame’s existing summon and request flows. The X in either the wallet panel or its expanded view dismisses both wallet views while Home stays open.
 
 To test with a separate copy of a complete Frame profile:
 
 ```bash
-FRAME_HOME_USER_DATA="/absolute/path/to/copied-frame-profile" ./dist/home/linux-unpacked/frame-home
+FRAME_HOME_USER_DATA="/absolute/path/to/copied-frame-profile" ./dist/home/linux-unpacked/openpond-local-wallet
 ```
 
 Copy the profile while Frame is closed. Signing-capable profiles include `signers/` as well as `config.json`; the main JSON alone may not include encrypted signer material. Unlock with Frame’s normal password dialog.
@@ -40,6 +40,10 @@ FRAME_HOME_USER_DATA="/absolute/path/to/test-profile" npm start
 ```
 
 `npm run package:home` creates an unpacked application with the separate identity. Use this command rather than the original upstream packaging commands when distributing this fork. Upstream automatic update checks are disabled: updating this fork requires incorporating upstream changes and rebuilding.
+
+## CLI
+
+See [op-walletctl](./cli/README.md) for installation and commands. The CLI reads existing desktop accounts through an owner-only Unix socket. Hosted Personal Vault pairing is deferred; no hosted login is required.
 
 ## Checks
 

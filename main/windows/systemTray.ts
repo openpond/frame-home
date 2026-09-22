@@ -44,7 +44,7 @@ export class SystemTray {
 
   init(mainWindow: BrowserWindow) {
     // Electron Tray can only be instantiated when the app is ready
-    this.electronTray = new ElectronTray(path.join(__dirname, isMacOS ? './IconTemplate.png' : './Icon.png'))
+    this.electronTray = new ElectronTray(path.join(__dirname, './Icon.png'))
     this.electronTray.on('click', (_event: KeyboardEvent, bounds: Rectangle) => {
       const mainWindowBounds = mainWindow.getBounds()
       const currentDisplay = screen.getDisplayMatching(bounds)
@@ -61,7 +61,7 @@ export class SystemTray {
     { displaySummonShortcut = false, accelerator = 'Alt+/', switchScreen = false }
   ) {
     const separatorMenuItem = {
-      label: 'Frame',
+      label: 'OpenPond Local Wallet',
       click: () => {},
       type: 'separator'
     }
@@ -74,7 +74,7 @@ export class SystemTray {
     const actionMenuItem: Electron.MenuItemConstructorOptions = {
       label,
       click: () => this.clickHandlers[eventName as keyof typeof this.clickHandlers](),
-      toolTip: `${label} Frame`
+      toolTip: `${label} OpenPond Local Wallet`
     }
     const quitMenuItem = {
       label: 'Quit',
